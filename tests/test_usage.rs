@@ -38,8 +38,8 @@ fn usage_body() -> serde_json::Value {
 
 // ── get_usage returns full envelope (data + totals + meta) ────────────────────
 
+#[cfg(feature = "phase-contracts")]
 #[tokio::test]
-#[ignore = "Phase 3: transport not yet implemented"]
 async fn get_usage_returns_full_usage_summary_envelope() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
@@ -60,8 +60,8 @@ async fn get_usage_returns_full_usage_summary_envelope() {
     assert_eq!(summary.meta.interval, "day");
 }
 
+#[cfg(feature = "phase-contracts")]
 #[tokio::test]
-#[ignore = "Phase 3: transport not yet implemented"]
 async fn get_usage_start_and_end_sent_as_iso8601() {
     use chrono::NaiveDate;
     let server = MockServer::start().await;
@@ -83,8 +83,8 @@ async fn get_usage_start_and_end_sent_as_iso8601() {
         .expect("get_usage with dates should succeed");
 }
 
+#[cfg(feature = "phase-contracts")]
 #[tokio::test]
-#[ignore = "Phase 3: transport not yet implemented"]
 async fn get_usage_metering_class_sent_comma_separated() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
@@ -135,8 +135,8 @@ fn usage_summary_data_can_be_empty() {
 
 // ── Error dispatch for /usage ─────────────────────────────────────────────────
 
+#[cfg(feature = "phase-contracts")]
 #[tokio::test]
-#[ignore = "Phase 3: transport not yet implemented"]
 async fn get_usage_401_becomes_auth_error() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))

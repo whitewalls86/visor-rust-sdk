@@ -3,6 +3,12 @@ name = "visor"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+# Enable contract tests that are written ahead of their implementation phase.
+# These tests compile but fail until the relevant phase lands.
+# Run with: cargo test --features phase-contracts
+phase-contracts = []
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", features = ["json", "blocking"] }
