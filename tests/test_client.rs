@@ -3,6 +3,9 @@ use visor::{AsyncVisorClient, ClientConfig, ListingsFilter, VisorClient, VisorEr
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+// Serialize all tests that mutate VISOR_API_KEY so they can't race.
+static ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 // ── Constructor contracts ─────────────────────────────────────────────────────
 
 #[test]
@@ -19,7 +22,7 @@ fn sync_client_new_with_empty_key_panics() {
 
 #[test]
 fn async_from_env_without_env_var_returns_missing_api_key() {
-    // Safety: not safe to run in parallel with tests that set VISOR_API_KEY.
+    let _guard = ENV_MUTEX.lock().unwrap();
     std::env::remove_var("VISOR_API_KEY");
     let result = AsyncVisorClient::from_env();
     assert!(
@@ -30,6 +33,7 @@ fn async_from_env_without_env_var_returns_missing_api_key() {
 
 #[test]
 fn sync_from_env_without_env_var_returns_missing_api_key() {
+    let _guard = ENV_MUTEX.lock().unwrap();
     std::env::remove_var("VISOR_API_KEY");
     let result = VisorClient::from_env();
     assert!(
