@@ -43,7 +43,8 @@ pub struct VehicleBuild {
     pub window_sticker_verified: bool,
     pub base_msrp: Option<i32>,
     pub combined_msrp: Option<i32>,
-    pub options: Option<Vec<VehicleOption>>,
+    #[serde(default)]
+    pub options: Vec<VehicleOption>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

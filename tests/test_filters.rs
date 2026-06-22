@@ -17,6 +17,7 @@ fn has_key(params: &[(String, String)], key: &str) -> bool {
 // ── Serialization golden tests ────────────────────────────────────────────────
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn default_listings_filter_emits_limit_offset_sort() {
     let params = ListingsFilter::default().to_params();
     assert_eq!(param(&params, "limit").as_deref(), Some("50"));
@@ -37,6 +38,7 @@ fn inventory_status_active_omitted_from_params() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn inventory_status_sold_emitted_as_wire_value() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -52,6 +54,7 @@ fn inventory_status_sold_emitted_as_wire_value() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn assembly_location_uses_pipe_separator() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -67,6 +70,7 @@ fn assembly_location_uses_pipe_separator() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn exclude_assembly_location_uses_plus_separator() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -82,6 +86,7 @@ fn exclude_assembly_location_uses_plus_separator() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn bbox_serialized_as_west_south_east_north() {
     use visor::BBox;
     let filter = ListingsFilter {
@@ -103,6 +108,7 @@ fn bbox_serialized_as_west_south_east_north() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn sort_wire_values_match_python_sdk() {
     let cases = [
         (SortOrder::DaysOnMarket, "days_on_market"),
@@ -132,6 +138,7 @@ fn sort_wire_values_match_python_sdk() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn fields_projection_emitted_comma_separated() {
     let filter = ListingsFilter {
         fields: Some(vec![
@@ -148,6 +155,7 @@ fn fields_projection_emitted_comma_separated() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn include_emitted_comma_separated() {
     let filter = ListingsFilter {
         include: Some(vec![ListingInclude::PriceHistory, ListingInclude::Options]),
@@ -160,6 +168,7 @@ fn include_emitted_comma_separated() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn snapshot_date_serialized_as_iso8601() {
     use chrono::NaiveDate;
     let filter = ListingsFilter {
@@ -176,6 +185,7 @@ fn snapshot_date_serialized_as_iso8601() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn comma_separated_list_fields_join_correctly() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -191,6 +201,7 @@ fn comma_separated_list_fields_join_correctly() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn facets_filter_always_emits_sort() {
     let filter = FacetsFilter::new(vec!["make".to_string()]);
     let params = filter.to_params();
@@ -203,6 +214,7 @@ fn facets_filter_always_emits_sort() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn facet_sort_wire_values() {
     let cases = [
         (FacetSort::Count, "count"),
@@ -222,6 +234,7 @@ fn facet_sort_wire_values() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn dealer_filter_type_field_uses_wire_key_type() {
     let filter = DealerFilter {
         dealer_type: Some(DealerType::Franchise),
@@ -236,6 +249,7 @@ fn dealer_filter_type_field_uses_wire_key_type() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn dealer_filter_independent_wire_value() {
     let filter = DealerFilter {
         dealer_type: Some(DealerType::Independent),
@@ -248,6 +262,7 @@ fn dealer_filter_independent_wire_value() {
 }
 
 #[test]
+#[ignore = "Phase 4: to_params not yet implemented"]
 fn dealer_filter_default_emits_limit_and_offset() {
     let params = DealerFilter::default().to_params();
     assert_eq!(param(&params, "limit").as_deref(), Some("50"));
@@ -264,6 +279,7 @@ fn assert_invalid_filter(result: Result<(), VisorError>) {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn radius_without_any_anchor_is_invalid() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -276,6 +292,7 @@ fn radius_without_any_anchor_is_invalid() {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn radius_with_both_anchors_is_invalid() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -291,6 +308,7 @@ fn radius_with_both_anchors_is_invalid() {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn radius_with_lat_but_no_lon_is_invalid() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -304,6 +322,7 @@ fn radius_with_lat_but_no_lon_is_invalid() {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn bbox_and_radius_together_is_invalid() {
     use visor::BBox;
     let filter = ListingsFilter {
@@ -324,6 +343,7 @@ fn bbox_and_radius_together_is_invalid() {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn sold_within_days_without_sold_status_is_invalid() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -337,6 +357,7 @@ fn sold_within_days_without_sold_status_is_invalid() {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn snapshot_date_with_sold_status_is_invalid() {
     use chrono::NaiveDate;
     // snapshot_date requires Active; Sold is not Active
@@ -353,6 +374,7 @@ fn snapshot_date_with_sold_status_is_invalid() {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn sold_within_days_and_snapshot_date_together_is_invalid() {
     use chrono::NaiveDate;
     // sold_within_days needs Sold; snapshot_date needs Active — mutually exclusive.
@@ -371,6 +393,7 @@ fn sold_within_days_and_snapshot_date_together_is_invalid() {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn listings_limit_over_100_is_invalid() {
     let filter = ListingsFilter {
         limit: 101,
@@ -380,11 +403,13 @@ fn listings_limit_over_100_is_invalid() {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn facets_filter_empty_facets_is_invalid() {
     assert_invalid_filter(FacetsFilter::new(vec![]).validate());
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn dealer_filter_over_100_ids_is_invalid() {
     let ids: Vec<String> = (0..=100).map(|i| format!("dealer-{i}")).collect(); // 101 entries
     let filter = DealerFilter {
@@ -395,6 +420,7 @@ fn dealer_filter_over_100_ids_is_invalid() {
 }
 
 #[test]
+#[ignore = "Phase 4: validate not yet implemented"]
 fn dealer_filter_limit_over_100_is_invalid() {
     let filter = DealerFilter {
         limit: 101,

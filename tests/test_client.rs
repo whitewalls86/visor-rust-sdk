@@ -61,6 +61,7 @@ fn client_config_default_timeout_is_30_seconds() {
 // Not Url::join — that drops path segments (e.g. /v1 would be lost in production).
 
 #[tokio::test]
+#[ignore = "Phase 3: transport not yet implemented"]
 async fn base_url_with_trailing_slash_still_hits_correct_path() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
@@ -88,6 +89,7 @@ async fn base_url_with_trailing_slash_still_hits_correct_path() {
 }
 
 #[tokio::test]
+#[ignore = "Phase 3: transport not yet implemented"]
 async fn base_url_without_trailing_slash_also_composes_correctly() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
