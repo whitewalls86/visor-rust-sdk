@@ -2,6 +2,7 @@ use crate::client::ClientConfig;
 use crate::error::VisorError;
 
 /// Sync client for the Visor Public API.
+#[derive(Debug)]
 pub struct VisorClient {
     #[allow(dead_code)] // used by transport in Phase 3
     pub(crate) config: ClientConfig,
