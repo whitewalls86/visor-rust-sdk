@@ -1,5 +1,5 @@
-pub mod error;
-pub mod models;
+mod error;
+mod models;
 
 mod client;
 mod pagination;
