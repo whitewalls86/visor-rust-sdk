@@ -31,8 +31,11 @@ Primary source: `docs/api/filter-listings.md`.
   `RadiusMiles`.
 - Normalize `StateCode` and `CountryCode` to uppercase after trimming. Validate
   them as exactly two ASCII letters.
-- Normalize `PostalCode` by trimming only. Validate it as exactly five ASCII
-  digits and store it as a string so leading zeros are preserved.
+- `PostalCode` accepts two formats, stored as a string:
+  - US ZIP: exactly five ASCII digits; leading zeros are preserved.
+  - Canadian: compact `A1A1A1` or spaced `A1A 1A1`; both normalized to the
+    spaced uppercase form. All alphabetic positions reject the letters excluded
+    by Canada Post: `D`, `F`, `I`, `O`, `Q`, `U`.
 - Keep response models tolerant; these stricter types are for caller-provided
   filters.
 
@@ -107,7 +110,7 @@ should serialize as comma-separated lists.
 | `options_packages` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `features` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `assembly_location` | `Option<Vec<String>>` | same | pipe-separated | non-empty values |
-| `assembly_country` | `Option<Vec<String>>` | `Option<Vec<CountryCode>>` | comma-separated | two ASCII letters; normalize to uppercase |
+| `assembly_country` | `Option<Vec<String>>` | same | comma-separated | non-empty values; API docs say "assembly country values," not country codes |
 | `vin_pattern` | `Option<Vec<String>>` | `Option<Vec<VinPattern>>` | comma-separated | up to 10 patterns; `?` matches one position; `*` allowed only at end |
 | `keywords` | `Option<Vec<String>>` | `Option<Vec<HistoryKeyword>>` | comma-separated | enum values only |
 
@@ -293,7 +296,7 @@ lists.
 | `exclude_version` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `exclude_engine` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `exclude_assembly_location` | `Option<Vec<String>>` | same | plus-separated | non-empty values |
-| `exclude_assembly_country` | `Option<Vec<String>>` | `Option<Vec<CountryCode>>` | comma-separated | two ASCII letters; normalize to uppercase |
+| `exclude_assembly_country` | `Option<Vec<String>>` | same | comma-separated | non-empty values; API docs say "assembly countries," not country codes |
 | `exclude_exterior_color` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `exclude_interior_color` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `exclude_base_exterior_color` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
