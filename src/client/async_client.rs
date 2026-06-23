@@ -1,7 +1,16 @@
+use chrono::NaiveDate;
+
 use crate::client::ClientConfig;
 use crate::error::VisorError;
+use crate::models::base::ListingInclude;
+use crate::models::dealers::{DealerDetail, DealerFilter, DealersPage};
+use crate::models::facets::{FacetsFilter, FacetsResponse};
+use crate::models::listings::{ListingDetail, ListingsFilter, ListingsPage};
+use crate::models::usage::UsageSummary;
+use crate::models::vins::VinDetail;
 
 /// Async client for the Visor Public API.
+#[derive(Debug)]
 pub struct AsyncVisorClient {
     #[allow(dead_code)] // used by transport in Phase 3
     pub(crate) config: ClientConfig,
@@ -30,5 +39,78 @@ impl AsyncVisorClient {
     pub fn with_config(config: ClientConfig) -> Self {
         assert!(!config.api_key.is_empty(), "api_key must not be empty");
         Self { config }
+    }
+
+    // ── Stub methods — Phase 5 TODO ───────────────────────────────────────────
+
+    pub async fn filter_listings(
+        &self,
+        _filter: &ListingsFilter,
+    ) -> Result<ListingsPage, VisorError> {
+        Err(VisorError::InvalidResponse {
+            message: "not implemented".to_string(),
+        })
+    }
+
+    pub async fn get_listing(
+        &self,
+        _id: &str,
+        _include: Option<Vec<ListingInclude>>,
+    ) -> Result<ListingDetail, VisorError> {
+        Err(VisorError::InvalidResponse {
+            message: "not implemented".to_string(),
+        })
+    }
+
+    pub async fn lookup_vin(
+        &self,
+        _vin: &str,
+        _include: Option<Vec<ListingInclude>>,
+    ) -> Result<VinDetail, VisorError> {
+        Err(VisorError::InvalidResponse {
+            message: "not implemented".to_string(),
+        })
+    }
+
+    pub async fn filter_facets(
+        &self,
+        _filter: &FacetsFilter,
+    ) -> Result<FacetsResponse, VisorError> {
+        Err(VisorError::InvalidResponse {
+            message: "not implemented".to_string(),
+        })
+    }
+
+    pub async fn search_dealers(&self, _filter: &DealerFilter) -> Result<DealersPage, VisorError> {
+        Err(VisorError::InvalidResponse {
+            message: "not implemented".to_string(),
+        })
+    }
+
+    pub async fn get_dealer(&self, _id: &str) -> Result<DealerDetail, VisorError> {
+        Err(VisorError::InvalidResponse {
+            message: "not implemented".to_string(),
+        })
+    }
+
+    pub async fn dealer_inventory(
+        &self,
+        _dealer_id: &str,
+        _filter: &ListingsFilter,
+    ) -> Result<ListingsPage, VisorError> {
+        Err(VisorError::InvalidResponse {
+            message: "not implemented".to_string(),
+        })
+    }
+
+    pub async fn get_usage(
+        &self,
+        _start: Option<NaiveDate>,
+        _end: Option<NaiveDate>,
+        _metering_class: Option<Vec<String>>,
+    ) -> Result<UsageSummary, VisorError> {
+        Err(VisorError::InvalidResponse {
+            message: "not implemented".to_string(),
+        })
     }
 }

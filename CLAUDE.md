@@ -78,6 +78,20 @@ cargo test --all-features
 cargo tree -e features
 ```
 
+To run phase-contract tests (written ahead of their implementation phase):
+
+```bash
+# Linux/macOS
+RUSTFLAGS='--cfg phase_contracts' cargo test
+
+# Windows PowerShell
+$env:RUSTFLAGS='--cfg phase_contracts'; cargo test
+```
+
+These tests intentionally fail until the relevant phase lands. They use a
+custom `cfg` flag rather than a Cargo feature so that `cargo test --all-features`
+remains a healthy check at all times.
+
 Do not run live API tests unless `VISOR_API_KEY` is present. Mocked tests should
 be the default.
 
