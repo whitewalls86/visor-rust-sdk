@@ -23,7 +23,7 @@ Primary source: `docs/api/filter-listings.md`.
 
 - Introduce a strict `ListingField` enum for projection fields.
 - Introduce a `VinPattern` domain type instead of validating raw strings only.
-- Add the `uuid` crate and use `uuid::Uuid` for `dealer_id` filter inputs.
+- Use `uuid::Uuid` for `dealer_id` filter inputs.
 - Implement `GeoFilter` and `InventoryModeFilter` now rather than carrying
   invalid combinations as separate fields.
 - Introduce typed code/domain fields where the API documents shape rules:
@@ -192,7 +192,7 @@ This makes invalid combinations unrepresentable:
 - `snapshot_date` with sold inventory
 - `sold_within_days` and `snapshot_date` together
 
-Do this in Phase 4. This enum replaces the separate public filter fields for
+This enum replaces the separate public filter fields for
 `inventory_status`, `sold_within_days`, and `snapshot_date`.
 
 ## Numeric Range Filters
