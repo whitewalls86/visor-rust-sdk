@@ -8,12 +8,12 @@ use crate::models::facets::{FacetsFilter, FacetsResponse};
 use crate::models::listings::{ListingDetail, ListingsFilter, ListingsPage};
 use crate::models::usage::UsageSummary;
 use crate::models::vins::VinDetail;
+use crate::transport::SyncVisorTransport;
 
 /// Sync client for the Visor Public API.
 #[derive(Debug)]
 pub struct VisorClient {
-    #[allow(dead_code)] // used by transport in Phase 3
-    pub(crate) config: ClientConfig,
+    transport: SyncVisorTransport,
 }
 
 impl VisorClient {
@@ -38,26 +38,28 @@ impl VisorClient {
     /// Panics if `config.api_key` is empty.
     pub fn with_config(config: ClientConfig) -> Self {
         assert!(!config.api_key.is_empty(), "api_key must not be empty");
-        Self { config }
+        Self {
+            transport: SyncVisorTransport::new(config),
+        }
     }
 
-    // ── Stub methods — Phase 5 TODO ───────────────────────────────────────────
+    // ── Implemented methods ───────────────────────────────────────────────────
 
-    pub fn filter_listings(&self, _filter: &ListingsFilter) -> Result<ListingsPage, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+    pub fn filter_listings(&self, filter: &ListingsFilter) -> Result<ListingsPage, VisorError> {
+        filter.validate()?;
+        self.transport.get("/listings", filter.to_params())
     }
 
     pub fn get_listing(
         &self,
-        _id: &str,
+        id: &str,
         _include: Option<Vec<ListingInclude>>,
     ) -> Result<ListingDetail, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+        // Phase 4 TODO: serialize include params via ListingInclude::as_str()
+        self.transport.get(&format!("/listings/{id}"), vec![])
     }
+
+    // ── Stub methods — Phase 5 TODO ───────────────────────────────────────────
 
     pub fn lookup_vin(
         &self,
