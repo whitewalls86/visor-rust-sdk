@@ -1,8 +1,14 @@
 use serde_json::json;
-use visor::{AsyncVisorClient, ClientConfig, UsageSummary, VisorError};
+use visor::UsageSummary;
+
+#[cfg(phase_contracts)]
+use visor::{AsyncVisorClient, ClientConfig, VisorError};
+#[cfg(phase_contracts)]
 use wiremock::matchers::{method, path, query_param};
+#[cfg(phase_contracts)]
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+#[cfg(phase_contracts)]
 fn make_client(base_url: String) -> AsyncVisorClient {
     AsyncVisorClient::with_config(ClientConfig {
         api_key: "test-key".to_string(),
@@ -38,7 +44,7 @@ fn usage_body() -> serde_json::Value {
 
 // ── get_usage returns full envelope (data + totals + meta) ────────────────────
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[tokio::test]
 async fn get_usage_returns_full_usage_summary_envelope() {
     let server = MockServer::start().await;
@@ -60,7 +66,7 @@ async fn get_usage_returns_full_usage_summary_envelope() {
     assert_eq!(summary.meta.interval, "day");
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[tokio::test]
 async fn get_usage_start_and_end_sent_as_iso8601() {
     use chrono::NaiveDate;
@@ -83,7 +89,7 @@ async fn get_usage_start_and_end_sent_as_iso8601() {
         .expect("get_usage with dates should succeed");
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[tokio::test]
 async fn get_usage_metering_class_sent_comma_separated() {
     let server = MockServer::start().await;
@@ -135,7 +141,7 @@ fn usage_summary_data_can_be_empty() {
 
 // ── Error dispatch for /usage ─────────────────────────────────────────────────
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[tokio::test]
 async fn get_usage_401_becomes_auth_error() {
     let server = MockServer::start().await;

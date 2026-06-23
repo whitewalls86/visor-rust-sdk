@@ -1,8 +1,15 @@
+use visor::{InventoryStatus, ListingsFilter, ListingsFilterBase};
+
+#[cfg(phase_contracts)]
 use visor::{
-    DealerFilter, DealerType, FacetSort, FacetsFilter, InventoryStatus, ListingInclude,
-    ListingsFilter, ListingsFilterBase, SortOrder, VisorError,
+    DealerFilter, DealerType, FacetSort, FacetsFilter, ListingInclude, SortOrder, VisorError,
 };
 
+fn has_key(params: &[(String, String)], key: &str) -> bool {
+    params.iter().any(|(k, _)| k == key)
+}
+
+#[cfg(phase_contracts)]
 fn param(params: &[(String, String)], key: &str) -> Option<String> {
     params
         .iter()
@@ -10,13 +17,9 @@ fn param(params: &[(String, String)], key: &str) -> Option<String> {
         .map(|(_, v)| v.clone())
 }
 
-fn has_key(params: &[(String, String)], key: &str) -> bool {
-    params.iter().any(|(k, _)| k == key)
-}
-
 // ── Serialization golden tests ────────────────────────────────────────────────
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn default_listings_filter_emits_limit_offset_sort() {
     let params = ListingsFilter::default().to_params();
@@ -37,7 +40,7 @@ fn inventory_status_active_omitted_from_params() {
     assert!(!has_key(&filter.to_params(), "inventory_status"));
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn inventory_status_sold_emitted_as_wire_value() {
     let filter = ListingsFilter {
@@ -53,7 +56,7 @@ fn inventory_status_sold_emitted_as_wire_value() {
     assert_eq!(param(&params, "sold_within_days").as_deref(), Some("30"));
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn assembly_location_uses_pipe_separator() {
     let filter = ListingsFilter {
@@ -69,7 +72,7 @@ fn assembly_location_uses_pipe_separator() {
     );
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn exclude_assembly_location_uses_plus_separator() {
     let filter = ListingsFilter {
@@ -85,7 +88,7 @@ fn exclude_assembly_location_uses_plus_separator() {
     );
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn bbox_serialized_as_west_south_east_north() {
     use visor::BBox;
@@ -107,7 +110,7 @@ fn bbox_serialized_as_west_south_east_north() {
     );
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn sort_wire_values_match_python_sdk() {
     let cases = [
@@ -137,7 +140,7 @@ fn sort_wire_values_match_python_sdk() {
     }
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn fields_projection_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -154,7 +157,7 @@ fn fields_projection_emitted_comma_separated() {
     );
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn include_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -167,7 +170,7 @@ fn include_emitted_comma_separated() {
     );
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn snapshot_date_serialized_as_iso8601() {
     use chrono::NaiveDate;
@@ -184,7 +187,7 @@ fn snapshot_date_serialized_as_iso8601() {
     );
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn comma_separated_list_fields_join_correctly() {
     let filter = ListingsFilter {
@@ -200,7 +203,7 @@ fn comma_separated_list_fields_join_correctly() {
     assert_eq!(param(&params, "state").as_deref(), Some("CA,TX"));
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_always_emits_sort() {
     let filter = FacetsFilter::new(vec!["make".to_string()]);
@@ -213,7 +216,7 @@ fn facets_filter_always_emits_sort() {
     assert_eq!(param(&params, "sort").as_deref(), Some("-count"));
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn facet_sort_wire_values() {
     let cases = [
@@ -233,7 +236,7 @@ fn facet_sort_wire_values() {
     }
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_type_field_uses_wire_key_type() {
     let filter = DealerFilter {
@@ -248,7 +251,7 @@ fn dealer_filter_type_field_uses_wire_key_type() {
     );
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_independent_wire_value() {
     let filter = DealerFilter {
@@ -261,7 +264,7 @@ fn dealer_filter_independent_wire_value() {
     );
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_default_emits_limit_and_offset() {
     let params = DealerFilter::default().to_params();
@@ -271,6 +274,7 @@ fn dealer_filter_default_emits_limit_and_offset() {
 
 // ── Validation error tests ────────────────────────────────────────────────────
 
+#[cfg(phase_contracts)]
 fn assert_invalid_filter(result: Result<(), VisorError>) {
     assert!(
         matches!(result, Err(VisorError::InvalidFilter { .. })),
@@ -278,7 +282,7 @@ fn assert_invalid_filter(result: Result<(), VisorError>) {
     );
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn radius_without_any_anchor_is_invalid() {
     let filter = ListingsFilter {
@@ -291,7 +295,7 @@ fn radius_without_any_anchor_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn radius_with_both_anchors_is_invalid() {
     let filter = ListingsFilter {
@@ -307,7 +311,7 @@ fn radius_with_both_anchors_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn radius_with_lat_but_no_lon_is_invalid() {
     let filter = ListingsFilter {
@@ -321,7 +325,7 @@ fn radius_with_lat_but_no_lon_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn bbox_and_radius_together_is_invalid() {
     use visor::BBox;
@@ -342,7 +346,7 @@ fn bbox_and_radius_together_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn sold_within_days_without_sold_status_is_invalid() {
     let filter = ListingsFilter {
@@ -356,7 +360,7 @@ fn sold_within_days_without_sold_status_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn snapshot_date_with_sold_status_is_invalid() {
     use chrono::NaiveDate;
@@ -373,7 +377,7 @@ fn snapshot_date_with_sold_status_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn sold_within_days_and_snapshot_date_together_is_invalid() {
     use chrono::NaiveDate;
@@ -392,7 +396,7 @@ fn sold_within_days_and_snapshot_date_together_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn listings_limit_over_100_is_invalid() {
     let filter = ListingsFilter {
@@ -402,13 +406,13 @@ fn listings_limit_over_100_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_empty_facets_is_invalid() {
     assert_invalid_filter(FacetsFilter::new(vec![]).validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_over_100_ids_is_invalid() {
     let ids: Vec<String> = (0..=100).map(|i| format!("dealer-{i}")).collect(); // 101 entries
@@ -419,7 +423,7 @@ fn dealer_filter_over_100_ids_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(feature = "phase-contracts")]
+#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_limit_over_100_is_invalid() {
     let filter = DealerFilter {

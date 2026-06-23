@@ -3,11 +3,13 @@ name = "visor"
 version = "0.1.0"
 edition = "2021"
 
-[features]
-# Enable contract tests that are written ahead of their implementation phase.
-# These tests compile but fail until the relevant phase lands.
-# Run with: cargo test --features phase-contracts
-phase-contracts = []
+[lints.rust]
+# Declare the custom cfg flag used to opt into phase-contract tests.
+# These tests are written ahead of their implementation phase and intentionally
+# fail until that phase lands. Using a cfg flag (not a Cargo feature) keeps
+# cargo test --all-features clean.
+# Run with: RUSTFLAGS='--cfg phase_contracts' cargo test
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(phase_contracts)'] }
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
