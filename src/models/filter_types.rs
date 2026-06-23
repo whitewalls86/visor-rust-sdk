@@ -185,7 +185,10 @@ impl StateCode {
     }
 }
 
-/// ISO 3166-1 alpha-2 country code, normalized to uppercase ASCII.
+/// Two-letter country code, normalized to uppercase ASCII.
+///
+/// Only shape is validated (two ASCII letters). Unknown codes such as `ZZ`
+/// are accepted; the API is the authority on which values are meaningful.
 #[derive(Debug, Clone)]
 pub struct CountryCode(String);
 
@@ -225,6 +228,12 @@ fn is_canadian_postal_alpha(b: u8) -> bool {
     u.is_ascii_alphabetic() && !matches!(u, b'D' | b'F' | b'I' | b'O' | b'Q' | b'U')
 }
 
+/// Returns true if `b` is valid as the first letter (FSA) of a Canadian postal code.
+/// W and Z are also excluded from the first position in addition to the standard exclusions.
+fn is_canadian_fsa_first_alpha(b: u8) -> bool {
+    is_canadian_postal_alpha(b) && !matches!(b.to_ascii_uppercase(), b'W' | b'Z')
+}
+
 impl PostalCode {
     pub fn new(code: &str) -> Result<Self, VisorError> {
         let code = code.trim();
@@ -249,14 +258,24 @@ impl PostalCode {
         };
 
         // Pattern: alpha digit alpha digit alpha digit
+        // Position 0 (FSA first letter) also excludes W and Z.
         let alpha_positions = [0usize, 2, 4];
         let digit_positions = [1usize, 3, 5];
         for &i in &alpha_positions {
-            if !is_canadian_postal_alpha(compact[i]) {
+            let valid = if i == 0 {
+                is_canadian_fsa_first_alpha(compact[i])
+            } else {
+                is_canadian_postal_alpha(compact[i])
+            };
+            if !valid {
+                let note = if i == 0 {
+                    "letters D, F, I, O, Q, U, W, Z are not used in the first position"
+                } else {
+                    "letters D, F, I, O, Q, U are not used"
+                };
                 return Err(VisorError::InvalidFilter {
                     message: format!(
-                        "invalid character {:?} at position {} of Canadian postal code {:?}; \
-                         letters D, F, I, O, Q, U are not used",
+                        "invalid character {:?} at position {} of Canadian postal code {:?}; {note}",
                         compact[i] as char, i, code
                     ),
                 });
@@ -426,9 +445,14 @@ pub enum GeoOrigin {
 
 /// Geographic constraint for listing filters.
 ///
-/// `Radius` and `BBox` are mutually exclusive; the enum enforces this.
+/// Variants are mutually exclusive; the enum enforces this.
+///
+/// `Origin` anchors distance sorting (`sort=distance`, `distance_miles`)
+/// without constraining by radius. `Radius` adds a mile limit. `BBox`
+/// constrains to a bounding box.
 #[derive(Debug, Clone)]
 pub enum GeoFilter {
+    Origin(GeoOrigin),
     Radius {
         origin: GeoOrigin,
         miles: RadiusMiles,
@@ -621,6 +645,22 @@ mod tests {
     #[test]
     fn postal_code_rejects_canadian_excluded_letter_u() {
         assert!(PostalCode::new("U1A 0A9").is_err());
+    }
+
+    #[test]
+    fn postal_code_rejects_canadian_w_in_first_position() {
+        assert!(PostalCode::new("W1A 0A9").is_err());
+    }
+
+    #[test]
+    fn postal_code_rejects_canadian_z_in_first_position() {
+        assert!(PostalCode::new("Z1A 0A9").is_err());
+    }
+
+    #[test]
+    fn postal_code_accepts_w_and_z_in_non_first_alpha_positions() {
+        // W and Z are only excluded from position 0; positions 2 and 4 allow them.
+        assert!(PostalCode::new("K1W 0Z9").is_ok());
     }
 
     #[test]
@@ -830,6 +870,21 @@ mod tests {
             east: -121.9,
             north: 37.8,
         });
+    }
+
+    #[test]
+    fn geo_filter_origin_with_postal_code() {
+        let origin = GeoOrigin::PostalCode(PostalCode::new("90210").unwrap());
+        let _filter = GeoFilter::Origin(origin);
+    }
+
+    #[test]
+    fn geo_filter_origin_with_coordinates() {
+        let origin = GeoOrigin::Coordinates {
+            latitude: Latitude::new(34.05).unwrap(),
+            longitude: Longitude::new(-118.25).unwrap(),
+        };
+        let _filter = GeoFilter::Origin(origin);
     }
 
     // InventoryModeFilter construction

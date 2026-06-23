@@ -359,9 +359,10 @@ fn facets_filter_empty_facets_is_invalid() {
 
 #[cfg(phase_contracts)]
 #[test]
-fn dealer_filter_over_50_ids_is_invalid() {
-    // dealer_id takes Vec<Uuid>; generate 51 deterministic nil-variant UUIDs.
-    let ids: Vec<Uuid> = (0u128..=50).map(Uuid::from_u128).collect(); // 51 entries
+fn dealer_filter_over_100_ids_is_invalid() {
+    // dealer_id takes Vec<Uuid>; generate 101 deterministic nil-variant UUIDs.
+    // DealerFilter allows up to 100 IDs (search-dealers.md line 66).
+    let ids: Vec<Uuid> = (0u128..=100).map(Uuid::from_u128).collect(); // 101 entries
     let filter = DealerFilter {
         dealer_id: Some(ids),
         ..DealerFilter::default()
