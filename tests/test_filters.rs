@@ -1,8 +1,12 @@
-use visor::{InventoryStatus, ListingsFilter, ListingsFilterBase};
+use visor::{InventoryModeFilter, ListingsFilter, ListingsFilterBase};
+
+#[cfg(phase_contracts)]
+use uuid::Uuid;
 
 #[cfg(phase_contracts)]
 use visor::{
-    DealerFilter, DealerType, FacetSort, FacetsFilter, ListingInclude, SortOrder, VisorError,
+    BBox, DealerFilter, DealerType, FacetSort, FacetsFilter, GeoFilter, HistoryKeyword,
+    InventoryType, ListingField, ListingInclude, SortOrder, StateCode, VisorError,
 };
 
 fn has_key(params: &[(String, String)], key: &str) -> bool {
@@ -29,10 +33,10 @@ fn default_listings_filter_emits_limit_offset_sort() {
 }
 
 #[test]
-fn inventory_status_active_omitted_from_params() {
+fn inventory_mode_active_omitted_from_params() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
-            inventory_status: InventoryStatus::Active,
+            inventory_mode: InventoryModeFilter::Active,
             ..ListingsFilterBase::default()
         },
         ..ListingsFilter::default()
@@ -42,11 +46,12 @@ fn inventory_status_active_omitted_from_params() {
 
 #[cfg(phase_contracts)]
 #[test]
-fn inventory_status_sold_emitted_as_wire_value() {
+fn inventory_mode_sold_emitted_as_wire_value() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
-            inventory_status: InventoryStatus::Sold,
-            sold_within_days: Some(30),
+            inventory_mode: InventoryModeFilter::Sold {
+                sold_within_days: Some(30),
+            },
             ..ListingsFilterBase::default()
         },
         ..ListingsFilter::default()
@@ -91,15 +96,14 @@ fn exclude_assembly_location_uses_plus_separator() {
 #[cfg(phase_contracts)]
 #[test]
 fn bbox_serialized_as_west_south_east_north() {
-    use visor::BBox;
     let filter = ListingsFilter {
         base: ListingsFilterBase {
-            bbox: Some(BBox {
+            geo: Some(GeoFilter::BBox(BBox {
                 west: -122.5,
                 south: 37.2,
                 east: -121.9,
                 north: 37.8,
-            }),
+            })),
             ..ListingsFilterBase::default()
         },
         ..ListingsFilter::default()
@@ -145,9 +149,9 @@ fn sort_wire_values_match_python_sdk() {
 fn fields_projection_emitted_comma_separated() {
     let filter = ListingsFilter {
         fields: Some(vec![
-            "make".to_string(),
-            "price".to_string(),
-            "year".to_string(),
+            ListingField::Make,
+            ListingField::Price,
+            ListingField::Year,
         ]),
         ..ListingsFilter::default()
     };
@@ -176,7 +180,9 @@ fn snapshot_date_serialized_as_iso8601() {
     use chrono::NaiveDate;
     let filter = ListingsFilter {
         base: ListingsFilterBase {
-            snapshot_date: Some(NaiveDate::from_ymd_opt(2024, 3, 15).unwrap()),
+            inventory_mode: InventoryModeFilter::Snapshot {
+                date: NaiveDate::from_ymd_opt(2024, 3, 15).unwrap(),
+            },
             ..ListingsFilterBase::default()
         },
         ..ListingsFilter::default()
@@ -193,7 +199,10 @@ fn comma_separated_list_fields_join_correctly() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
             make: Some(vec!["Toyota".to_string(), "Honda".to_string()]),
-            state: Some(vec!["CA".to_string(), "TX".to_string()]),
+            state: Some(vec![
+                StateCode::new("CA").unwrap(),
+                StateCode::new("TX").unwrap(),
+            ]),
             ..ListingsFilterBase::default()
         },
         ..ListingsFilter::default()
@@ -205,6 +214,38 @@ fn comma_separated_list_fields_join_correctly() {
 
 #[cfg(phase_contracts)]
 #[test]
+fn inventory_type_wire_values_emitted() {
+    let filter = ListingsFilter {
+        base: ListingsFilterBase {
+            inventory_type: Some(vec![InventoryType::New, InventoryType::Certified]),
+            ..ListingsFilterBase::default()
+        },
+        ..ListingsFilter::default()
+    };
+    assert_eq!(
+        param(&filter.to_params(), "inventory_type").as_deref(),
+        Some("new,certified")
+    );
+}
+
+#[cfg(phase_contracts)]
+#[test]
+fn history_keywords_emitted_comma_separated() {
+    let filter = ListingsFilter {
+        base: ListingsFilterBase {
+            keywords: Some(vec![HistoryKeyword::OneOwner, HistoryKeyword::CleanTitle]),
+            ..ListingsFilterBase::default()
+        },
+        ..ListingsFilter::default()
+    };
+    assert_eq!(
+        param(&filter.to_params(), "keywords").as_deref(),
+        Some("one_owner,clean_title")
+    );
+}
+
+#[cfg(phase_contracts)]
+#[test]
 fn facets_filter_always_emits_sort() {
     let filter = FacetsFilter::new(vec!["make".to_string()]);
     let params = filter.to_params();
@@ -212,7 +253,6 @@ fn facets_filter_always_emits_sort() {
         has_key(&params, "sort"),
         "FacetsFilter must always emit sort"
     );
-    // CountDesc is the default
     assert_eq!(param(&params, "sort").as_deref(), Some("-count"));
 }
 
@@ -274,126 +314,25 @@ fn dealer_filter_default_emits_limit_and_offset() {
 
 // ── Validation error tests ────────────────────────────────────────────────────
 
+// NOTE: Several geo/inventory-mode validation tests that existed in earlier
+// drafts are intentionally absent here. Phase 3.5 introduces `GeoFilter` and
+// `InventoryModeFilter` as enums, making the following combinations impossible
+// to construct at the type level:
+//   - radius without an anchor (GeoFilter::Radius requires an origin)
+//   - radius with both anchors (GeoOrigin is one-of postal-code or lat/lon)
+//   - lat without lon (GeoOrigin::Coordinates requires both)
+//   - bbox + radius together (GeoFilter is an enum; only one variant applies)
+//   - sold_within_days without sold mode (only exists on InventoryModeFilter::Sold)
+//   - snapshot_date with sold mode (only exists on InventoryModeFilter::Snapshot)
+//   - sold_within_days + snapshot_date together (impossible across two variants)
+// These invariants are now compile-time guarantees, not runtime checks.
+
 #[cfg(phase_contracts)]
 fn assert_invalid_filter(result: Result<(), VisorError>) {
     assert!(
         matches!(result, Err(VisorError::InvalidFilter { .. })),
         "expected InvalidFilter, got: {result:?}"
     );
-}
-
-#[cfg(phase_contracts)]
-#[test]
-fn radius_without_any_anchor_is_invalid() {
-    let filter = ListingsFilter {
-        base: ListingsFilterBase {
-            radius: Some(25.0),
-            ..ListingsFilterBase::default()
-        },
-        ..ListingsFilter::default()
-    };
-    assert_invalid_filter(filter.validate());
-}
-
-#[cfg(phase_contracts)]
-#[test]
-fn radius_with_both_anchors_is_invalid() {
-    let filter = ListingsFilter {
-        base: ListingsFilterBase {
-            radius: Some(25.0),
-            postal_code: Some("90210".to_string()),
-            latitude: Some(34.0),
-            longitude: Some(-118.0),
-            ..ListingsFilterBase::default()
-        },
-        ..ListingsFilter::default()
-    };
-    assert_invalid_filter(filter.validate());
-}
-
-#[cfg(phase_contracts)]
-#[test]
-fn radius_with_lat_but_no_lon_is_invalid() {
-    let filter = ListingsFilter {
-        base: ListingsFilterBase {
-            radius: Some(25.0),
-            latitude: Some(34.0),
-            ..ListingsFilterBase::default()
-        },
-        ..ListingsFilter::default()
-    };
-    assert_invalid_filter(filter.validate());
-}
-
-#[cfg(phase_contracts)]
-#[test]
-fn bbox_and_radius_together_is_invalid() {
-    use visor::BBox;
-    let filter = ListingsFilter {
-        base: ListingsFilterBase {
-            bbox: Some(BBox {
-                west: -122.5,
-                south: 37.2,
-                east: -121.9,
-                north: 37.8,
-            }),
-            radius: Some(10.0),
-            postal_code: Some("94102".to_string()),
-            ..ListingsFilterBase::default()
-        },
-        ..ListingsFilter::default()
-    };
-    assert_invalid_filter(filter.validate());
-}
-
-#[cfg(phase_contracts)]
-#[test]
-fn sold_within_days_without_sold_status_is_invalid() {
-    let filter = ListingsFilter {
-        base: ListingsFilterBase {
-            sold_within_days: Some(30),
-            // inventory_status defaults to Active
-            ..ListingsFilterBase::default()
-        },
-        ..ListingsFilter::default()
-    };
-    assert_invalid_filter(filter.validate());
-}
-
-#[cfg(phase_contracts)]
-#[test]
-fn snapshot_date_with_sold_status_is_invalid() {
-    use chrono::NaiveDate;
-    // snapshot_date requires Active; Sold is not Active
-    let filter = ListingsFilter {
-        base: ListingsFilterBase {
-            snapshot_date: Some(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
-            inventory_status: InventoryStatus::Sold,
-            sold_within_days: Some(30),
-            ..ListingsFilterBase::default()
-        },
-        ..ListingsFilter::default()
-    };
-    assert_invalid_filter(filter.validate());
-}
-
-#[cfg(phase_contracts)]
-#[test]
-fn sold_within_days_and_snapshot_date_together_is_invalid() {
-    use chrono::NaiveDate;
-    // sold_within_days needs Sold; snapshot_date needs Active — mutually exclusive.
-    // Setting inventory_status=Active will fail on sold_within_days needing Sold.
-    // Either way, validate() must return InvalidFilter.
-    let filter = ListingsFilter {
-        base: ListingsFilterBase {
-            sold_within_days: Some(30),
-            snapshot_date: Some(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
-            inventory_status: InventoryStatus::Active,
-            ..ListingsFilterBase::default()
-        },
-        ..ListingsFilter::default()
-    };
-    assert_invalid_filter(filter.validate());
 }
 
 #[cfg(phase_contracts)]
@@ -414,8 +353,9 @@ fn facets_filter_empty_facets_is_invalid() {
 
 #[cfg(phase_contracts)]
 #[test]
-fn dealer_filter_over_100_ids_is_invalid() {
-    let ids: Vec<String> = (0..=100).map(|i| format!("dealer-{i}")).collect(); // 101 entries
+fn dealer_filter_over_50_ids_is_invalid() {
+    // dealer_id takes Vec<Uuid>; generate 51 deterministic nil-variant UUIDs.
+    let ids: Vec<Uuid> = (0u128..=50).map(Uuid::from_u128).collect(); // 51 entries
     let filter = DealerFilter {
         dealer_id: Some(ids),
         ..DealerFilter::default()

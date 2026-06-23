@@ -9,10 +9,12 @@ mod transport;
 pub use client::{AsyncVisorClient, ClientConfig, VisorClient};
 pub use error::{ApiErrorBody, VisorError};
 pub use models::{
-    BBox, DealerAddress, DealerDetail, DealerFilter, DealerRef, DealerSummary, DealerType,
-    DealersPage, FacetBucket, FacetSort, FacetsData, FacetsFilter, FacetsMeta, FacetsResponse,
-    FieldStats, InventoryStatus, ListingDetail, ListingInclude, ListingSnapshot, ListingSummary,
-    ListingsFilter, ListingsFilterBase, ListingsPage, Pagination, PriceHistoryEntry, RangeBucket,
-    RangeFacet, SortOrder, UsageMeta, UsageRecord, UsageSummary, UsageTotals, VehicleBuild,
-    VehicleOption, VehicleRecord, VinDetail,
+    AvailabilityStatus, BBox, CountryCode, DealerAddress, DealerDetail, DealerFilter, DealerRef,
+    DealerSummary, DealerType, DealersPage, FacetBucket, FacetSort, FacetsData, FacetsFilter,
+    FacetsMeta, FacetsResponse, FieldStats, GeoFilter, GeoOrigin, HistoryKeyword,
+    InventoryModeFilter, InventoryType, Latitude, ListingDetail, ListingField, ListingInclude,
+    ListingSnapshot, ListingSummary, ListingsFilter, ListingsFilterBase, ListingsPage, Longitude,
+    Pagination, PostalCode, PriceHistoryEntry, RadiusMiles, RangeBucket, RangeFacet, SortOrder,
+    StateCode, UsageMeta, UsageRecord, UsageSummary, UsageTotals, VehicleBuild, VehicleOption,
+    VehicleRecord, VinDetail, VinPattern,
 };

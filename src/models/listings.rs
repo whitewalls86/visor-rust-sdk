@@ -9,13 +9,14 @@ use crate::models::base::{ListingInclude, ListingsFilterBase, SortOrder};
 use crate::models::common::{
     DealerRef, Pagination, PriceHistoryEntry, VehicleOption, VehicleRecord,
 };
+use crate::models::filter_types::ListingField;
 
 pub struct ListingsFilter {
     pub base: ListingsFilterBase,
     pub limit: u32,
     pub offset: u32,
     pub sort: SortOrder,
-    pub fields: Option<Vec<String>>,
+    pub fields: Option<Vec<ListingField>>,
     pub include: Option<Vec<ListingInclude>>,
 }
 

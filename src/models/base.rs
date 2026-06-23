@@ -1,13 +1,10 @@
-use chrono::NaiveDate;
+use uuid::Uuid;
 
-use crate::models::common::BBox;
-
-#[derive(Debug, Clone, Default)]
-pub enum InventoryStatus {
-    #[default]
-    Active,
-    Sold,
-}
+use crate::models::dealers::DealerType;
+use crate::models::filter_types::{
+    AvailabilityStatus, CountryCode, GeoFilter, HistoryKeyword, InventoryModeFilter, InventoryType,
+    StateCode, VinPattern,
+};
 
 #[derive(Debug, Clone, Default)]
 pub enum SortOrder {
@@ -40,18 +37,14 @@ impl ListingInclude {
     }
 }
 
-/// Shared filter fields used by both ListingsFilter and FacetsFilter.
+/// Shared filter fields used by both `ListingsFilter` and `FacetsFilter`.
 #[derive(Debug, Clone, Default)]
 pub struct ListingsFilterBase {
+    // ── Vehicle ──────────────────────────────────────────────────────────────
     pub make: Option<Vec<String>>,
     pub model: Option<Vec<String>>,
     pub trim: Option<Vec<String>>,
-    pub year: Option<Vec<i32>>,
-    pub state: Option<Vec<String>>,
-    pub dealer_id: Option<Vec<String>>,
-    pub dealer_type: Option<Vec<String>>,
-    pub availability_status: Option<Vec<String>>,
-    pub inventory_type: Option<Vec<String>>,
+    pub year: Option<Vec<u16>>,
     pub body_type: Option<Vec<String>>,
     pub transmission: Option<Vec<String>>,
     pub drivetrain: Option<Vec<String>>,
@@ -63,22 +56,52 @@ pub struct ListingsFilterBase {
     pub interior_color: Option<Vec<String>>,
     pub base_exterior_color: Option<Vec<String>>,
     pub base_interior_color: Option<Vec<String>>,
-    pub seating_capacity: Option<Vec<i32>>,
-    pub cylinders: Option<Vec<i32>>,
-    pub doors: Option<Vec<i32>>,
+    pub seating_capacity: Option<Vec<u8>>,
+    pub cylinders: Option<Vec<u8>>,
+    pub doors: Option<Vec<u8>>,
     pub options_packages: Option<Vec<String>>,
     pub features: Option<Vec<String>>,
-    pub keywords: Option<Vec<String>>,
-    pub vin_pattern: Option<Vec<String>>,
     /// Pipe-separated on the wire.
     pub assembly_location: Option<Vec<String>>,
-    pub assembly_country: Option<Vec<String>>,
+    pub assembly_country: Option<Vec<CountryCode>>,
+    pub vin_pattern: Option<Vec<VinPattern>>,
+    pub keywords: Option<Vec<HistoryKeyword>>,
+
+    // ── Dealer ───────────────────────────────────────────────────────────────
+    pub state: Option<Vec<StateCode>>,
+    pub dealer_id: Option<Vec<Uuid>>,
+    pub dealer_type: Option<Vec<DealerType>>,
+
+    // ── Inventory status ─────────────────────────────────────────────────────
+    pub availability_status: Option<Vec<AvailabilityStatus>>,
+    pub inventory_type: Option<Vec<InventoryType>>,
+    /// Controls which inventory mode is queried and its associated parameters.
+    /// Defaults to `Active`. Replaces the old `inventory_status`,
+    /// `sold_within_days`, and `snapshot_date` separate fields.
+    pub inventory_mode: InventoryModeFilter,
+
+    // ── Numeric ranges ───────────────────────────────────────────────────────
+    pub min_price: Option<u32>,
+    pub max_price: Option<u32>,
+    pub min_mileage: Option<u32>,
+    pub max_mileage: Option<u32>,
+    pub min_msrp: Option<u32>,
+    pub max_msrp: Option<u32>,
+    pub min_days_on_market: Option<u32>,
+    pub max_days_on_market: Option<u32>,
+
+    // ── Geographic ───────────────────────────────────────────────────────────
+    /// Radius or bounding-box constraint. Radius/bbox are mutually exclusive;
+    /// the `GeoFilter` enum makes invalid combinations impossible.
+    pub geo: Option<GeoFilter>,
+
+    // ── Exclusions ───────────────────────────────────────────────────────────
     pub exclude_make: Option<Vec<String>>,
     pub exclude_model: Option<Vec<String>>,
     pub exclude_trim: Option<Vec<String>>,
-    pub exclude_year: Option<Vec<i32>>,
-    pub exclude_state: Option<Vec<String>>,
-    pub exclude_inventory_type: Option<Vec<String>>,
+    pub exclude_year: Option<Vec<u16>>,
+    pub exclude_state: Option<Vec<StateCode>>,
+    pub exclude_inventory_type: Option<Vec<InventoryType>>,
     pub exclude_body_type: Option<Vec<String>>,
     pub exclude_transmission: Option<Vec<String>>,
     pub exclude_drivetrain: Option<Vec<String>>,
@@ -86,7 +109,7 @@ pub struct ListingsFilterBase {
     pub exclude_engine: Option<Vec<String>>,
     /// Plus-separated on the wire.
     pub exclude_assembly_location: Option<Vec<String>>,
-    pub exclude_assembly_country: Option<Vec<String>>,
+    pub exclude_assembly_country: Option<Vec<CountryCode>>,
     pub exclude_exterior_color: Option<Vec<String>>,
     pub exclude_interior_color: Option<Vec<String>>,
     pub exclude_base_exterior_color: Option<Vec<String>>,
@@ -95,21 +118,5 @@ pub struct ListingsFilterBase {
     pub exclude_features: Option<Vec<String>>,
     pub exclude_fuel_type: Option<Vec<String>>,
     pub exclude_powertrain_type: Option<Vec<String>>,
-    pub exclude_keywords: Option<Vec<String>>,
-    pub min_price: Option<i32>,
-    pub max_price: Option<i32>,
-    pub min_mileage: Option<i32>,
-    pub max_mileage: Option<i32>,
-    pub min_msrp: Option<i32>,
-    pub max_msrp: Option<i32>,
-    pub min_days_on_market: Option<i32>,
-    pub max_days_on_market: Option<i32>,
-    pub inventory_status: InventoryStatus,
-    pub sold_within_days: Option<i32>,
-    pub snapshot_date: Option<NaiveDate>,
-    pub postal_code: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub radius: Option<f64>,
-    pub bbox: Option<BBox>,
+    pub exclude_keywords: Option<Vec<HistoryKeyword>>,
 }
