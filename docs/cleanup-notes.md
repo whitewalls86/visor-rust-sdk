@@ -11,115 +11,96 @@ current phase.
 - Consider renaming the Rust field to `query: Option<String>` while still
   serializing it as the wire parameter `q` in `DealerFilter::to_params()`.
 
-## Domain types for validated input
+## Completed filter-design work
 
-- Consider introducing small domain types for user-provided filter values that
-  have universal validity rules, such as latitude and longitude.
-- Possible examples: `Latitude`, `Longitude`, `CountryCode`, `RegionCode`.
-- Prefer using these to validate caller input before sending a request, where
-  they make the SDK easier and safer to use.
-- Be more tolerant when deserializing API responses. The SDK should not become
-  an accidental data-quality gate for values returned by the API unless the API
-  contract explicitly requires that behavior.
-- Latitude/longitude are likely the strongest candidates because their valid
-  ranges are universal. State/country codes may need looser shape validation or
-  more API-specific investigation before becoming strict types.
+The domain types, closed-vocabulary enums, `GeoFilter`, `InventoryModeFilter`,
+and unsigned filter bounds discussed in earlier versions of this file were
+implemented in Phases 3.5 and 3.6. Their current contracts live in:
 
-## Listing filter validation and numeric types
+- `docs/design/phase-3-5-listings-filter-contract.md`
+- `docs/design/phase-3-6-facets-contract.md`
 
-- `ListingsFilterBase` has several user-provided fields that should likely get
-  input validation before requests are sent: `year`, `state`,
-  `availability_status`, `inventory_type`, `vin_pattern`, `postal_code`,
-  `latitude`, and `longitude`.
-- Consider using unsigned numeric types for filter bounds that cannot be
-  negative, such as min/max price, MSRP, mileage, and days on market.
-- Even with unsigned types, keep explicit validation for relationships such as
-  `min_price <= max_price`, `min_mileage <= max_mileage`, and valid geospatial
-  combinations.
-- Keep response model choices separate from input model choices. API responses
-  may remain more permissive, while caller-provided filters can be stricter.
+Keep this cleanup file for work that remains deferred rather than duplicating
+active implementation requirements.
 
-## Filter enums for closed vocabularies
+## Dynamic facet catalog and code generation
 
-- During the Phase 4 model/filter pass, consider replacing stringly typed input
-  fields with enums where `docs/api/` defines a closed vocabulary.
-- Strong candidates include `availability_status` (`stock`, `transit`,
-  `build`), `inventory_type` (`new`, `used`, `certified`), `dealer_type`
-  (`franchise`, `independent`), `keywords` (`one_owner`, `clean_title`,
-  `branded`, `fleet`), and any other documented closed values.
-- Prefer these stricter enums for caller-provided filter inputs so typos are
-  caught before making a request.
-- Keep response models more tolerant unless strict response deserialization is
-  an explicit SDK design decision.
+Explore an optional utility that discovers the API's current categorical values
+by walking down the facet hierarchy:
 
-## Geo filter type modeling
+1. Fetch all observed makes with `facets=make`.
+2. For each make, fetch observed models with `facets=model&make=...`.
+3. For each make/model pair, fetch observed years with
+   `facets=year&make=...&model=...`.
+4. Optionally continue into trim, version, body type, powertrain, or other
+   categorical facets.
 
-- `bbox` and `radius` cannot be combined according to the API docs.
-- The Python SDK currently enforces this with a model validator:
-  `radius` requires exactly one of `postal_code` or `latitude + longitude`, and
-  `bbox` is mutually exclusive with `radius`.
-- Consider replacing separate `postal_code`, `latitude`, `longitude`, `radius`,
-  and `bbox` filter fields with a more structured input type for geospatial
-  filtering.
-- A possible shape:
+The durable output should be a timestamped catalog snapshot, probably JSON,
+rather than generated Rust source as the only artifact. The snapshot should
+record the filter context used to build it, such as inventory mode, geography,
+and snapshot date.
 
-```rust
-pub enum GeoOrigin {
-    PostalCode(String),
-    Coordinates {
-        latitude: Latitude,
-        longitude: Longitude,
-    },
-}
+Possible consumers:
 
-pub enum GeoFilter {
-    Radius {
-        origin: GeoOrigin,
-        miles: f64,
-    },
-    BBox(BBox),
-}
+- Runtime discovery helpers for search forms and autocomplete.
+- Advisory checks and spelling suggestions for caller-provided values.
+- A separate `visor-codegen` CLI or companion crate that turns a pinned snapshot
+  into Rust constants or enums for compiler autocomplete.
+- Other generators, such as TypeScript values, UI dropdown data, or database
+  seed files.
+
+Generated Rust source should be explicit and reproducible:
+
+```text
+Visor facets API
+      -> visor-codegen catalog
+      -> visor-catalog.json
+      -> visor-codegen rust
+      -> generated Rust source committed by the consuming application
 ```
 
-- Then `ListingsFilterBase` could expose `geo: Option<GeoFilter>`, making
-  invalid `radius + bbox` combinations unrepresentable.
-- This would also encode the rule that radius searches require either a postal
-  code or latitude/longitude origin.
-- Revisit in Phase 4 alongside filter validation, domain types, and query
-  serialization ergonomics.
+Do not fetch live API data from `build.rs`. Network-dependent builds would be
+slow, fragile, and non-reproducible. Prefer an explicitly refreshed, committed
+snapshot.
 
-## Inventory mode type modeling
+Treat discovered values as observed data, not an authoritative allowlist:
 
-- The Python SDK validator also enforces relationships between
-  `inventory_status`, `sold_within_days`, and `snapshot_date`.
-- Current logical rules:
-  - `sold_within_days` requires `inventory_status = sold`
-  - `snapshot_date` requires `inventory_status = active`
-  - `sold_within_days` and `snapshot_date` are mutually exclusive
-- Consider replacing the separate fields with an enum that represents valid
-  inventory modes directly:
+- Facet values change with inventory.
+- Results depend on the filters used during discovery.
+- `facet_value_limit` is capped at 100, so a response may be truncated.
+- Rare, historical, aliased, or newly added values may be absent.
+- Catalog validation should therefore be opt-in and advisory, not part of core
+  `ListingsFilter::validate()`.
 
-```rust
-pub enum InventoryModeFilter {
-    Active,
-    Sold {
-        sold_within_days: Option<u32>,
-    },
-    Snapshot {
-        date: NaiveDate,
-    },
-}
-```
+Questions to resolve later:
 
-- This would make invalid combinations such as `sold_within_days` with active
-  inventory, `snapshot_date` with sold inventory, or both historical modes at
-  once unrepresentable in normal construction.
-- Revisit the exact shape against `docs/api/`: the API wire value still uses
-  `inventory_status=active|sold`, plus optional `sold_within_days` or
-  `snapshot_date` query params.
-- If this enum feels too large for Phase 4, keep explicit `validate()` checks
-  that mirror the Python SDK validator, but prefer the enum if ergonomics stay
-  reasonable.
+- Generate constants, enums, or both. Constants are less breaking when values
+  change; enums provide stronger typing and richer compiler autocomplete.
+- How to sanitize values such as `F-150` into stable identifiers and handle
+  collisions after normalization.
+- How to detect incomplete 100-value facet responses.
+- Rate-limit handling, bounded concurrency, progress, retries, and resumable
+  catalog generation.
+- Whether years should remain explicit sets or be summarized as ranges.
+- Whether generated types should model make -> model relationships directly or
+  expose independent lookup modules.
+
+### Python SDK follow-up
+
+Think through the equivalent feature for the Python SDK rather than assuming
+the Rust code-generation design maps directly.
+
+Potential Python shapes include:
+
+- Runtime facet discovery and cached catalog objects.
+- Optional advisory validation and spelling suggestions.
+- Generated `Enum` or `Literal` definitions for static type checkers and IDE
+  autocomplete.
+- Generated `.pyi` stubs or modules from the same language-neutral JSON
+  snapshot used by Rust.
+
+The shared JSON catalog should remain language-neutral so Rust and Python can
+offer idiomatic interfaces without duplicating the expensive discovery crawl.
 
 ## Fallible constructors and panic boundaries
 

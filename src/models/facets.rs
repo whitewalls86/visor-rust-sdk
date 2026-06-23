@@ -209,9 +209,30 @@ impl FacetsFilter {
         }
     }
 
-    /// Serialize to query-string params. Stub — Phase 4 TODO.
+    /// Serialize to query-string params.
     pub fn to_params(&self) -> Vec<(String, String)> {
-        vec![]
+        let mut params = Vec::new();
+        // 1. facets (always emitted)
+        let facets_str = self
+            .facets
+            .iter()
+            .map(|f| f.as_str())
+            .collect::<Vec<_>>()
+            .join(",");
+        params.push(("facets".to_string(), facets_str));
+        // 2. facet_value_limit (when set)
+        if let Some(limit) = self.facet_value_limit {
+            params.push(("facet_value_limit".to_string(), limit.to_string()));
+        }
+        // 3. metric (when set)
+        if let Some(metric) = &self.metric {
+            params.push(("metric".to_string(), metric.as_str()));
+        }
+        // 4. sort (always emitted)
+        params.push(("sort".to_string(), self.sort.as_str().to_string()));
+        // 5. shared base filter params
+        self.base.append_params(&mut params);
+        params
     }
 
     /// Validate filter constraints before sending a request.
@@ -260,6 +281,7 @@ impl FacetsFilter {
             _ => {}
         }
 
+        self.base.validate()?;
         Ok(())
     }
 }

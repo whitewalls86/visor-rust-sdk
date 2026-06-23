@@ -9,7 +9,7 @@ pub mod vins;
 
 pub use base::{ListingInclude, ListingsFilterBase, SortOrder};
 pub use common::{
-    BBox, DealerRef, Pagination, PriceHistoryEntry, VehicleBuild, VehicleOption, VehicleRecord,
+    DealerRef, Pagination, PriceHistoryEntry, VehicleBuild, VehicleOption, VehicleRecord,
 };
 pub use dealers::{
     DealerAddress, DealerDetail, DealerFilter, DealerSummary, DealerType, DealersPage,
@@ -19,9 +19,9 @@ pub use facets::{
     FacetsData, FacetsFilter, FacetsMeta, FacetsResponse, FieldStats, RangeBucket, RangeFacet,
 };
 pub use filter_types::{
-    AvailabilityStatus, CountryCode, GeoFilter, GeoOrigin, HistoryKeyword, InventoryModeFilter,
-    InventoryType, Latitude, ListingField, Longitude, PostalCode, RadiusMiles, StateCode,
-    VinPattern,
+    AvailabilityStatus, BBox, CountryCode, GeoFilter, GeoOrigin, HistoryKeyword,
+    InventoryModeFilter, InventoryType, Latitude, ListingField, Longitude, PostalCode, RadiusMiles,
+    StateCode, VinPattern,
 };
 pub use listings::{ListingDetail, ListingSnapshot, ListingSummary, ListingsFilter, ListingsPage};
 pub use usage::{UsageMeta, UsageRecord, UsageSummary, UsageTotals};

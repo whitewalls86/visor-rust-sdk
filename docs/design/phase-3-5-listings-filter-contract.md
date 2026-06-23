@@ -39,6 +39,14 @@ Primary source: `docs/api/filter-listings.md`.
     additionally rejects `W` and `Z`, which are not assigned as FSA letters.
 - Keep response models tolerant; these stricter types are for caller-provided
   filters.
+- Accept any `u16` model year. The API documents integer model years but does
+  not define a narrower supported range, so the SDK should not invent one.
+- Allow `0` in the `cylinders` filter because zero-cylinder vehicles may be
+  meaningful for electric inventory. Require positive values for
+  `seating_capacity` and `doors`.
+- Treat `Some(vec![])` like `None` during query serialization and omit the
+  parameter. For non-empty free-text vectors, reject elements that are empty or
+  contain only whitespace.
 
 ## Pagination And Sorting
 
@@ -93,7 +101,7 @@ should serialize as comma-separated lists.
 | `make` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `model` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `trim` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
-| `year` | `Option<Vec<i32>>` | `Option<Vec<u16>>` | comma-separated | sensible model-year range |
+| `year` | `Option<Vec<i32>>` | `Option<Vec<u16>>` | comma-separated | any `u16`; API defines no narrower range |
 | `body_type` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `transmission` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `drivetrain` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
@@ -106,7 +114,7 @@ should serialize as comma-separated lists.
 | `base_exterior_color` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `base_interior_color` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `seating_capacity` | `Option<Vec<i32>>` | `Option<Vec<u8>>` | comma-separated | positive values |
-| `cylinders` | `Option<Vec<i32>>` | `Option<Vec<u8>>` | comma-separated | positive values |
+| `cylinders` | `Option<Vec<i32>>` | `Option<Vec<u8>>` | comma-separated | nonnegative; `0` is allowed for electric inventory |
 | `doors` | `Option<Vec<i32>>` | `Option<Vec<u8>>` | comma-separated | positive values |
 | `options_packages` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `features` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
@@ -222,7 +230,7 @@ The API exposes separate wire params, but the valid combinations are structured:
 | `longitude` | `Option<f64>` | `Longitude` inside `GeoOrigin` | decimal string | `-180..=180` |
 | `postal_code` | `Option<String>` | `PostalCode` inside `GeoOrigin` | string | US ZIP or Canadian postal code; normalized by `PostalCode` |
 | `radius` | `Option<f64>` | `RadiusMiles` inside `GeoFilter::Radius` | decimal string | positive; max `500`; requires origin |
-| `bbox` | `Option<BBox>` | `GeoFilter::BBox(BBox)` | `west,south,east,north` | cannot combine with radius; max diagonal `1000` miles |
+| `bbox` | `Option<BBox>` | `GeoFilter::BBox(BBox)` | `west,south,east,north` | validated coordinates; `south <= north`; max diagonal `1000` miles |
 
 Phase 4 Rust shape:
 
@@ -231,6 +239,13 @@ pub struct Latitude(f64);
 pub struct Longitude(f64);
 pub struct PostalCode(String);
 pub struct RadiusMiles(f64);
+
+pub struct BBox {
+    west: Longitude,
+    south: Latitude,
+    east: Longitude,
+    north: Latitude,
+}
 
 pub enum GeoOrigin {
     PostalCode(PostalCode),
@@ -259,16 +274,49 @@ This encodes:
 
 `PostalCode` stores a string, not a number, so leading zeros are preserved.
 
-Phase 4 should validate the documented `bbox` max diagonal of 1000 miles using a
-lightweight local calculation, not a GIS dependency. A reasonable approximation:
+`BBox` is a validated caller-input type. Its fields should be private, and a
+fallible `BBox::new(west, south, east, north)` constructor should enforce:
+
+- each coordinate is already range-checked through `Latitude` or `Longitude`
+- all coordinate values are finite
+- `south <= north`
+- a maximum diagonal of 1000 miles
+
+Do not require `west <= east`. A box where `west > east` crosses the
+antimeridian. Compute its longitude span with wrapping:
 
 ```rust
-fn bbox_diagonal_miles(west: f64, south: f64, east: f64, north: f64) -> f64 {
-    let miles_per_degree_lat = 69.0;
-    let mid_lat_rad = ((north + south) / 2.0).to_radians();
+let longitude_span = if east >= west {
+    east - west
+} else {
+    360.0 - (west - east)
+};
+```
 
-    let height = (north - south).abs() * miles_per_degree_lat;
-    let width = (east - west).abs() * miles_per_degree_lat * mid_lat_rad.cos();
+Phase 4 should validate the documented maximum diagonal using a lightweight
+local calculation, not a GIS dependency. A reasonable approximation:
+
+```rust
+fn bbox_diagonal_miles(
+    west: Longitude,
+    south: Latitude,
+    east: Longitude,
+    north: Latitude,
+) -> f64 {
+    let miles_per_degree_lat = 69.0;
+    let west = west.value();
+    let south = south.value();
+    let east = east.value();
+    let north = north.value();
+    let mid_lat_rad = ((north + south) / 2.0).to_radians();
+    let longitude_span = if east >= west {
+        east - west
+    } else {
+        360.0 - (west - east)
+    };
+
+    let height = (north - south) * miles_per_degree_lat;
+    let width = longitude_span * miles_per_degree_lat * mid_lat_rad.cos().abs();
 
     (width.powi(2) + height.powi(2)).sqrt()
 }
@@ -291,7 +339,7 @@ lists.
 | `exclude_make` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `exclude_model` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `exclude_trim` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
-| `exclude_year` | `Option<Vec<i32>>` | `Option<Vec<u16>>` | comma-separated | sensible model-year range |
+| `exclude_year` | `Option<Vec<i32>>` | `Option<Vec<u16>>` | comma-separated | any `u16`; API defines no narrower range |
 | `exclude_state` | `Option<Vec<String>>` | `Option<Vec<StateCode>>` | comma-separated | two ASCII letters; normalize to uppercase |
 | `exclude_inventory_type` | `Option<Vec<String>>` | `Option<Vec<InventoryType>>` | comma-separated | enum values only |
 | `exclude_body_type` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
@@ -322,6 +370,31 @@ lists.
 - Serialize `bbox` as `west,south,east,north`.
 - Serialize dates as ISO 8601 `YYYY-MM-DD`.
 - Preserve parameter ordering in tests by returning `Vec<(String, String)>`.
+- Omit optional vectors when they are `None` or empty.
+- Reject empty or whitespace-only elements inside non-empty free-text vectors
+  rather than emitting ambiguous separators.
+
+## Phase 4 Implementation Boundary
+
+Implement shared listing-filter behavior once on `ListingsFilterBase`:
+
+```rust
+impl ListingsFilterBase {
+    pub(crate) fn append_params(&self, params: &mut Vec<(String, String)>);
+    pub fn validate(&self) -> Result<(), VisorError>;
+}
+```
+
+- `ListingsFilter::to_params()` and `FacetsFilter::to_params()` should call
+  `append_params()` rather than duplicating the shared field mapping.
+- `ListingsFilter::validate()` should validate listing-specific fields and then
+  call `self.base.validate()`.
+- `FacetsFilter::validate()` should keep its facet-specific checks and also call
+  `self.base.validate()`.
+- `DealerFilter` remains independent and should implement its own serialization
+  and validation.
+- Validation must happen before a client sends a request. Phase 4 implements the
+  model behavior; wiring the remaining client endpoints remains Phase 5 work.
 
 ## Validation Rules
 
@@ -339,10 +412,40 @@ Local validation should return `VisorError::InvalidFilter`.
 - `radius` is positive and `<= 500`.
 - `radius` requires exactly one origin: postal code or latitude/longitude.
 - `bbox` and `radius` are mutually exclusive.
+- `BBox` coordinates are finite and individually range-valid.
+- `BBox.south <= BBox.north`.
+- `BBox.west > BBox.east` is valid and represents an antimeridian-crossing box.
 - `bbox` diagonal is at most 1000 miles.
 - `sort=distance` requires a geo origin.
 - `sold_within_days` requires sold inventory mode.
 - `snapshot_date` requires active/snapshot inventory mode.
 - `sold_within_days` and `snapshot_date` are mutually exclusive.
 - For each numeric range pair, `min <= max`.
+- `sold_within_days`, `seating_capacity`, and `doors` are positive when set.
+- `cylinders` may be zero.
 - Empty strings in list filters should be rejected.
+- Empty optional vectors should be omitted, not serialized as empty values.
+
+## Phase 4 Test Additions
+
+Add focused tests that independently cover:
+
+- every `ListingsFilterBase` field and its exact wire parameter name
+- every enum/domain type wire value
+- default listing parameters: `limit`, `offset`, and `sort`
+- omission of default active inventory mode
+- active, sold, and snapshot inventory serialization
+- `GeoFilter::Origin` with postal and coordinate origins
+- `GeoFilter::Radius` with postal and coordinate origins
+- normal and antimeridian-crossing `BBox` serialization
+- invalid BBox latitude/longitude, non-finite values, inverted north/south, and
+  diagonals over 1000 miles
+- every numeric range and its `min <= max` validation
+- all exclusion filters and their separator rules
+- UUID serialization as hyphenated strings
+- empty-vector omission and blank free-text element rejection
+- complete `ListingsFilter`, `FacetsFilter`, and `DealerFilter` composition
+- `DealerFilter`'s 100-ID and page-limit constraints
+
+Phase 4 is complete when all filter phase-contract tests pass without changing
+the expected Phase 5 usage-client failures.

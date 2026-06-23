@@ -1,7 +1,6 @@
 use chrono::NaiveDate;
 
 use crate::error::VisorError;
-use crate::models::common::BBox;
 
 // ── Closed-vocabulary enums ────────────────────────────────────────────────
 
@@ -427,6 +426,85 @@ impl VinPattern {
     }
 }
 
+// ── BBox ─────────────────────────────────────────────────────────────────────
+
+/// Bounding box for geographic filtering.
+///
+/// West > east is valid and denotes an antimeridian-crossing box.
+/// Construct with [`BBox::new`]; fields are private to enforce invariants.
+#[derive(Debug, Clone)]
+pub struct BBox {
+    west: Longitude,
+    south: Latitude,
+    east: Longitude,
+    north: Latitude,
+}
+
+impl BBox {
+    /// Create a validated bounding box.
+    ///
+    /// Returns `VisorError::InvalidFilter` when:
+    /// - `south > north`
+    /// - the diagonal exceeds 1 000 miles (approximate)
+    pub fn new(
+        west: Longitude,
+        south: Latitude,
+        east: Longitude,
+        north: Latitude,
+    ) -> Result<Self, VisorError> {
+        if south.value() > north.value() {
+            return Err(VisorError::InvalidFilter {
+                message: format!(
+                    "BBox south ({}) must be <= north ({})",
+                    south.value(),
+                    north.value()
+                ),
+            });
+        }
+        let diag = bbox_diagonal_miles(west.value(), south.value(), east.value(), north.value());
+        if diag > 1000.0 {
+            return Err(VisorError::InvalidFilter {
+                message: format!(
+                    "BBox diagonal is approximately {:.0} miles, exceeding the 1000-mile maximum",
+                    diag
+                ),
+            });
+        }
+        Ok(Self {
+            west,
+            south,
+            east,
+            north,
+        })
+    }
+
+    pub fn west(&self) -> f64 {
+        self.west.value()
+    }
+    pub fn south(&self) -> f64 {
+        self.south.value()
+    }
+    pub fn east(&self) -> f64 {
+        self.east.value()
+    }
+    pub fn north(&self) -> f64 {
+        self.north.value()
+    }
+}
+
+fn bbox_diagonal_miles(west: f64, south: f64, east: f64, north: f64) -> f64 {
+    let miles_per_degree_lat = 69.0;
+    let mid_lat_rad = ((north + south) / 2.0).to_radians();
+    let longitude_span = if east >= west {
+        east - west
+    } else {
+        360.0 - (west - east)
+    };
+    let height = (north - south) * miles_per_degree_lat;
+    let width = longitude_span * miles_per_degree_lat * mid_lat_rad.cos().abs();
+    (width.powi(2) + height.powi(2)).sqrt()
+}
+
 // ── Structured relationship enums ──────────────────────────────────────────
 
 /// The anchor point for a radius search — either a postal code or a lat/lon pair.
@@ -724,6 +802,26 @@ mod tests {
         assert!(Longitude::new(-180.001).is_err());
     }
 
+    #[test]
+    fn latitude_rejects_nan() {
+        assert!(Latitude::new(f64::NAN).is_err());
+    }
+
+    #[test]
+    fn latitude_rejects_infinity() {
+        assert!(Latitude::new(f64::INFINITY).is_err());
+    }
+
+    #[test]
+    fn longitude_rejects_nan() {
+        assert!(Longitude::new(f64::NAN).is_err());
+    }
+
+    #[test]
+    fn longitude_rejects_infinity() {
+        assert!(Longitude::new(f64::INFINITY).is_err());
+    }
+
     // RadiusMiles
 
     #[test]
@@ -864,12 +962,64 @@ mod tests {
 
     #[test]
     fn geo_filter_bbox_construction() {
-        let _filter = GeoFilter::BBox(BBox {
-            west: -122.5,
-            south: 37.2,
-            east: -121.9,
-            north: 37.8,
-        });
+        let bbox = BBox::new(
+            Longitude::new(-122.5).unwrap(),
+            Latitude::new(37.2).unwrap(),
+            Longitude::new(-121.9).unwrap(),
+            Latitude::new(37.8).unwrap(),
+        )
+        .unwrap();
+        let _filter = GeoFilter::BBox(bbox);
+    }
+
+    #[test]
+    fn bbox_rejects_inverted_south_north() {
+        let result = BBox::new(
+            Longitude::new(-100.0).unwrap(),
+            Latitude::new(40.0).unwrap(),
+            Longitude::new(-90.0).unwrap(),
+            Latitude::new(35.0).unwrap(), // south (40) > north (35)
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn bbox_rejects_diagonal_over_1000_miles() {
+        // Roughly continental US bounding box — ~3600 mile diagonal
+        let result = BBox::new(
+            Longitude::new(-125.0).unwrap(),
+            Latitude::new(25.0).unwrap(),
+            Longitude::new(-66.0).unwrap(),
+            Latitude::new(49.0).unwrap(),
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn bbox_accepts_antimeridian_crossing() {
+        // west=175 > east=-175: longitude span is 10°, diagonal well under 1000 miles
+        let result = BBox::new(
+            Longitude::new(175.0).unwrap(),
+            Latitude::new(50.0).unwrap(),
+            Longitude::new(-175.0).unwrap(),
+            Latitude::new(55.0).unwrap(),
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn bbox_accessors_return_raw_values() {
+        let bbox = BBox::new(
+            Longitude::new(-122.5).unwrap(),
+            Latitude::new(37.2).unwrap(),
+            Longitude::new(-121.9).unwrap(),
+            Latitude::new(37.8).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(bbox.west(), -122.5);
+        assert_eq!(bbox.south(), 37.2);
+        assert_eq!(bbox.east(), -121.9);
+        assert_eq!(bbox.north(), 37.8);
     }
 
     #[test]

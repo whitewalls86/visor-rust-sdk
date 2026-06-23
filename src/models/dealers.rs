@@ -53,13 +53,79 @@ impl Default for DealerFilter {
 }
 
 impl DealerFilter {
-    /// Serialize to query-string params. Stub — Phase 4 TODO.
+    /// Serialize to query-string params.
     pub fn to_params(&self) -> Vec<(String, String)> {
-        vec![]
+        let mut params = Vec::new();
+        params.push(("limit".to_string(), self.limit.to_string()));
+        params.push(("offset".to_string(), self.offset.to_string()));
+        if let Some(ids) = &self.dealer_id {
+            if !ids.is_empty() {
+                let joined = ids
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                params.push(("dealer_id".to_string(), joined));
+            }
+        }
+        if let Some(states) = &self.state {
+            if !states.is_empty() {
+                let joined = states
+                    .iter()
+                    .map(|s| s.as_str())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                params.push(("state".to_string(), joined));
+            }
+        }
+        if let Some(country) = &self.country {
+            params.push(("country".to_string(), country.as_str().to_string()));
+        }
+        // Wire key is "type", not "dealer_type"
+        if let Some(dt) = &self.dealer_type {
+            params.push(("type".to_string(), dt.as_str().to_string()));
+        }
+        if let Some(makes) = &self.make {
+            if !makes.is_empty() {
+                params.push(("make".to_string(), makes.join(",")));
+            }
+        }
+        if let Some(q) = &self.q {
+            params.push(("q".to_string(), q.clone()));
+        }
+        params
     }
 
-    /// Validate filter constraints before sending a request. Stub — Phase 4 TODO.
+    /// Validate filter constraints before sending a request.
     pub fn validate(&self) -> Result<(), VisorError> {
+        if self.limit > 100 {
+            return Err(VisorError::InvalidFilter {
+                message: format!("limit must be <= 100, got {}", self.limit),
+            });
+        }
+        if let Some(ids) = &self.dealer_id {
+            if ids.len() > 100 {
+                return Err(VisorError::InvalidFilter {
+                    message: format!("dealer_id accepts at most 100 IDs, got {}", ids.len()),
+                });
+            }
+        }
+        if let Some(makes) = &self.make {
+            for m in makes {
+                if m.trim().is_empty() {
+                    return Err(VisorError::InvalidFilter {
+                        message: "make contains a blank element".to_string(),
+                    });
+                }
+            }
+        }
+        if let Some(q) = &self.q {
+            if q.trim().is_empty() {
+                return Err(VisorError::InvalidFilter {
+                    message: "q must not be blank".to_string(),
+                });
+            }
+        }
         Ok(())
     }
 }

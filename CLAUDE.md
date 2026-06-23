@@ -162,12 +162,25 @@ Port response models and filters in a focused pass.
 
 Requirements:
 
+- Treat `docs/design/phase-3-5-listings-filter-contract.md` and
+  `docs/design/phase-3-6-facets-contract.md` as the authoritative Phase 4
+  filter contracts. They supersede older filter-shape examples in
+  `docs/design/visor-rust-impl.md`.
 - Use `#[serde(default)]` for response fields that the API may omit.
 - Rename reserved JSON fields, such as dealer `type`, with serde attributes.
 - Use typed enums for constrained API values.
 - Manually serialize query params with `Vec<(String, String)>`.
 - Preserve separator quirks from the Python SDK.
 - Do not use `HashMap` for query params; test ordering should remain stable.
+- Implement shared query serialization and validation on
+  `ListingsFilterBase`; compose it from listing and facet filters rather than
+  duplicating the field mapping.
+- Use validated `BBox` coordinates, support antimeridian-crossing boxes, and
+  enforce the documented 1000-mile maximum diagonal.
+- Omit empty optional vectors and reject blank elements inside non-empty
+  free-text vectors.
+- Keep Phase 4 scoped to model serialization and validation. Remaining endpoint
+  wiring belongs to Phase 5.
 
 ## Phase 5: Clients
 
