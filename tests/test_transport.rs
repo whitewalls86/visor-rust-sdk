@@ -310,6 +310,53 @@ async fn async_get_listing_sends_include_query_param() {
     // MockServer verifies expect(1) on drop
 }
 
+#[tokio::test]
+async fn sync_get_listing_decodes_data_envelope() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/listings/abc123"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(listing_detail_body()))
+        .mount(&server)
+        .await;
+
+    let server_uri = server.uri();
+    let detail = tokio::task::spawn_blocking(move || {
+        sync_client(server_uri)
+            .get_listing("abc123", None)
+            .expect("should decode { data: ListingDetail } envelope")
+    })
+    .await
+    .unwrap();
+
+    assert_eq!(detail.id, "abc123");
+    assert_eq!(detail.vin, "1HGCM82633A123456");
+}
+
+#[tokio::test]
+async fn sync_get_listing_sends_include_query_param() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/listings/abc123"))
+        .and(query_param("include", "price_history,options"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(listing_detail_body()))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let server_uri = server.uri();
+    tokio::task::spawn_blocking(move || {
+        sync_client(server_uri)
+            .get_listing(
+                "abc123",
+                Some(vec![ListingInclude::PriceHistory, ListingInclude::Options]),
+            )
+            .expect("should send include query param");
+    })
+    .await
+    .unwrap();
+    // MockServer verifies expect(1) on drop
+}
+
 // ── Malformed error body → fallback to unknown_error ─────────────────────────
 
 #[tokio::test]
