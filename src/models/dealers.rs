@@ -2,22 +2,34 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 use serde_json::Value;
+use uuid::Uuid;
 
 use crate::error::VisorError;
 use crate::models::common::Pagination;
+use crate::models::filter_types::{CountryCode, StateCode};
 
+/// Dealer type. Closed vocabulary.
 #[derive(Debug, Clone)]
 pub enum DealerType {
     Franchise,
     Independent,
 }
 
+impl DealerType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Franchise => "franchise",
+            Self::Independent => "independent",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct DealerFilter {
-    pub dealer_id: Option<Vec<String>>,
-    pub state: Option<Vec<String>>,
-    pub country: Option<String>,
-    /// Serializes as wire key "type", not "dealer_type".
+    pub dealer_id: Option<Vec<Uuid>>,
+    pub state: Option<Vec<StateCode>>,
+    pub country: Option<CountryCode>,
+    /// Serializes as wire key `"type"`, not `"dealer_type"`.
     pub dealer_type: Option<DealerType>,
     pub make: Option<Vec<String>>,
     pub q: Option<String>,

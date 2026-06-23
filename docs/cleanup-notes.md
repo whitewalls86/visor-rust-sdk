@@ -55,6 +55,9 @@ current phase.
 ## Geo filter type modeling
 
 - `bbox` and `radius` cannot be combined according to the API docs.
+- The Python SDK currently enforces this with a model validator:
+  `radius` requires exactly one of `postal_code` or `latitude + longitude`, and
+  `bbox` is mutually exclusive with `radius`.
 - Consider replacing separate `postal_code`, `latitude`, `longitude`, `radius`,
   and `bbox` filter fields with a more structured input type for geospatial
   filtering.
@@ -84,3 +87,59 @@ pub enum GeoFilter {
   code or latitude/longitude origin.
 - Revisit in Phase 4 alongside filter validation, domain types, and query
   serialization ergonomics.
+
+## Inventory mode type modeling
+
+- The Python SDK validator also enforces relationships between
+  `inventory_status`, `sold_within_days`, and `snapshot_date`.
+- Current logical rules:
+  - `sold_within_days` requires `inventory_status = sold`
+  - `snapshot_date` requires `inventory_status = active`
+  - `sold_within_days` and `snapshot_date` are mutually exclusive
+- Consider replacing the separate fields with an enum that represents valid
+  inventory modes directly:
+
+```rust
+pub enum InventoryModeFilter {
+    Active,
+    Sold {
+        sold_within_days: Option<u32>,
+    },
+    Snapshot {
+        date: NaiveDate,
+    },
+}
+```
+
+- This would make invalid combinations such as `sold_within_days` with active
+  inventory, `snapshot_date` with sold inventory, or both historical modes at
+  once unrepresentable in normal construction.
+- Revisit the exact shape against `docs/api/`: the API wire value still uses
+  `inventory_status=active|sold`, plus optional `sold_within_days` or
+  `snapshot_date` query params.
+- If this enum feels too large for Phase 4, keep explicit `validate()` checks
+  that mirror the Python SDK validator, but prefer the enum if ergonomics stay
+  reasonable.
+
+## Fallible constructors and panic boundaries
+
+- Current constructors use panics for some setup-time failures:
+  `with_config()` asserts that `api_key` is non-empty, and transport
+  construction calls `expect()` if `reqwest` client construction fails.
+- This is acceptable for early scaffolding, but production-grade SDKs should be
+  careful about panics because an SDK panic can crash the caller's application.
+- Consider adding fallible constructors such as:
+
+```rust
+pub fn try_new(api_key: String) -> Result<Self, VisorError>
+pub fn try_with_config(config: ClientConfig) -> Result<Self, VisorError>
+```
+
+- These should return a typed error for invalid configuration or client
+  construction failures instead of panicking.
+- Existing panicking constructors could remain as convenience wrappers, or the
+  public API could move fully toward fallible construction.
+- Keep the boundary clear: request-time failures already return
+  `Result<_, VisorError>` and should continue to do so. Panics should be
+  reserved for internal invariant violations or explicitly documented
+  convenience methods.
