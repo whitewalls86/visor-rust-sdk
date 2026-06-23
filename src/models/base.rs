@@ -31,6 +31,15 @@ pub enum ListingInclude {
     Options,
 }
 
+impl ListingInclude {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::PriceHistory => "price_history",
+            Self::Options => "options",
+        }
+    }
+}
+
 /// Shared filter fields used by both ListingsFilter and FacetsFilter.
 #[derive(Debug, Clone, Default)]
 pub struct ListingsFilterBase {

@@ -1,6 +1,20 @@
 # Visor Rust SDK — Implementation Handoff
 
-Building a Rust SDK for the Visor Public API (https://api.visor.vin/v1). This document guides implementation of the core SDK architecture, ported from the proven Python design.
+Building a Rust SDK for the Visor Public API (https://api.visor.vin/v1). This document guides implementation of the core SDK architecture.
+
+## Source Of Truth
+
+Use the endpoint docs in `docs/api/` as the primary API contract:
+
+- endpoint paths and methods
+- query parameters and wire names
+- accepted enum values and validation rules
+- response envelope shapes
+- documented HTTP status behavior
+
+Use the Python SDK as a secondary compatibility reference for implementation
+patterns, especially transport behavior, filter serialization details, and error
+mapping. Do not depend on the Python SDK at runtime.
 
 ## Tech Stack
 

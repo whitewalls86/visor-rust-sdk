@@ -8,12 +8,12 @@ use crate::models::facets::{FacetsFilter, FacetsResponse};
 use crate::models::listings::{ListingDetail, ListingsFilter, ListingsPage};
 use crate::models::usage::UsageSummary;
 use crate::models::vins::VinDetail;
+use crate::transport::AsyncVisorTransport;
 
 /// Async client for the Visor Public API.
 #[derive(Debug)]
 pub struct AsyncVisorClient {
-    #[allow(dead_code)] // used by transport in Phase 3
-    pub(crate) config: ClientConfig,
+    transport: AsyncVisorTransport,
 }
 
 impl AsyncVisorClient {
@@ -38,29 +38,39 @@ impl AsyncVisorClient {
     /// Panics if `config.api_key` is empty.
     pub fn with_config(config: ClientConfig) -> Self {
         assert!(!config.api_key.is_empty(), "api_key must not be empty");
-        Self { config }
+        Self {
+            transport: AsyncVisorTransport::new(config),
+        }
     }
 
-    // ── Stub methods — Phase 5 TODO ───────────────────────────────────────────
+    // ── Implemented methods ───────────────────────────────────────────────────
 
     pub async fn filter_listings(
         &self,
-        _filter: &ListingsFilter,
+        filter: &ListingsFilter,
     ) -> Result<ListingsPage, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+        filter.validate()?;
+        self.transport.get("/listings", filter.to_params()).await
     }
 
     pub async fn get_listing(
         &self,
-        _id: &str,
-        _include: Option<Vec<ListingInclude>>,
+        id: &str,
+        include: Option<Vec<ListingInclude>>,
     ) -> Result<ListingDetail, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+        let mut params = Vec::new();
+        if let Some(includes) = include {
+            if !includes.is_empty() {
+                let s: Vec<&str> = includes.iter().map(|i| i.as_str()).collect();
+                params.push(("include".to_string(), s.join(",")));
+            }
+        }
+        self.transport
+            .get_one(&format!("/listings/{id}"), params)
+            .await
     }
+
+    // ── Stub methods — Phase 5 TODO ───────────────────────────────────────────
 
     pub async fn lookup_vin(
         &self,
