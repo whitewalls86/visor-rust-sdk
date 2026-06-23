@@ -11,9 +11,9 @@ use uuid::Uuid;
 
 #[cfg(phase_contracts)]
 use visor::{
-    AvailabilityStatus, DealerFilter, DealerType, GeoFilter, GeoOrigin, HistoryKeyword,
-    InventoryType, ListingField, ListingInclude, PostalCode, RadiusMiles, SortOrder, StateCode,
-    VinPattern,
+    AvailabilityStatus, CountryCode, DealerFilter, DealerType, GeoFilter, GeoOrigin,
+    HistoryKeyword, InventoryType, ListingField, ListingInclude, PostalCode, RadiusMiles,
+    SortOrder, StateCode, VinPattern,
 };
 
 fn has_key(params: &[(String, String)], key: &str) -> bool {
@@ -403,6 +403,40 @@ fn comma_separated_list_fields_join_correctly() {
 
 #[cfg(phase_contracts)]
 #[test]
+fn vehicle_string_list_fields_emitted_comma_separated() {
+    let filter = ListingsFilter {
+        base: ListingsFilterBase {
+            model: Some(vec!["Camry".to_string(), "Accord".to_string()]),
+            trim: Some(vec!["XLE".to_string()]),
+            body_type: Some(vec!["sedan".to_string(), "suv".to_string()]),
+            fuel_type: Some(vec!["gasoline".to_string()]),
+            drivetrain: Some(vec!["awd".to_string()]),
+            transmission: Some(vec!["automatic".to_string()]),
+            exterior_color: Some(vec!["white".to_string()]),
+            interior_color: Some(vec!["black".to_string()]),
+            assembly_location: Some(vec!["US".to_string(), "CA".to_string()]),
+            ..ListingsFilterBase::default()
+        },
+        ..ListingsFilter::default()
+    };
+    let params = filter.to_params();
+    assert_eq!(param(&params, "model").as_deref(), Some("Camry,Accord"));
+    assert_eq!(param(&params, "trim").as_deref(), Some("XLE"));
+    assert_eq!(param(&params, "body_type").as_deref(), Some("sedan,suv"));
+    assert_eq!(param(&params, "fuel_type").as_deref(), Some("gasoline"));
+    assert_eq!(param(&params, "drivetrain").as_deref(), Some("awd"));
+    assert_eq!(param(&params, "transmission").as_deref(), Some("automatic"));
+    assert_eq!(param(&params, "exterior_color").as_deref(), Some("white"));
+    assert_eq!(param(&params, "interior_color").as_deref(), Some("black"));
+    // assembly_location uses pipe separator
+    assert_eq!(
+        param(&params, "assembly_location").as_deref(),
+        Some("US|CA")
+    );
+}
+
+#[cfg(phase_contracts)]
+#[test]
 fn inventory_type_wire_values_emitted() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -614,6 +648,49 @@ fn exclusion_filters_emitted_with_correct_separators() {
         Some("CN")
     );
     assert_eq!(param(&params, "exclude_keywords").as_deref(), Some("fleet"));
+}
+
+#[cfg(phase_contracts)]
+#[test]
+fn additional_exclusion_filters_emitted_comma_separated() {
+    let filter = ListingsFilter {
+        base: ListingsFilterBase {
+            exclude_model: Some(vec!["F-150".to_string()]),
+            exclude_trim: Some(vec!["XL".to_string(), "XLT".to_string()]),
+            exclude_body_type: Some(vec!["truck".to_string()]),
+            exclude_drivetrain: Some(vec!["2wd".to_string()]),
+            exclude_transmission: Some(vec!["manual".to_string()]),
+            exclude_exterior_color: Some(vec!["red".to_string(), "yellow".to_string()]),
+            exclude_interior_color: Some(vec!["beige".to_string()]),
+            exclude_fuel_type: Some(vec!["diesel".to_string()]),
+            ..ListingsFilterBase::default()
+        },
+        ..ListingsFilter::default()
+    };
+    let params = filter.to_params();
+    assert_eq!(param(&params, "exclude_model").as_deref(), Some("F-150"));
+    assert_eq!(param(&params, "exclude_trim").as_deref(), Some("XL,XLT"));
+    assert_eq!(
+        param(&params, "exclude_body_type").as_deref(),
+        Some("truck")
+    );
+    assert_eq!(param(&params, "exclude_drivetrain").as_deref(), Some("2wd"));
+    assert_eq!(
+        param(&params, "exclude_transmission").as_deref(),
+        Some("manual")
+    );
+    assert_eq!(
+        param(&params, "exclude_exterior_color").as_deref(),
+        Some("red,yellow")
+    );
+    assert_eq!(
+        param(&params, "exclude_interior_color").as_deref(),
+        Some("beige")
+    );
+    assert_eq!(
+        param(&params, "exclude_fuel_type").as_deref(),
+        Some("diesel")
+    );
 }
 
 // ── FacetsFilter serialization ────────────────────────────────────────────────
@@ -928,6 +1005,34 @@ fn listings_mileage_range_validated() {
 
 #[cfg(phase_contracts)]
 #[test]
+fn listings_inverted_msrp_range_is_invalid() {
+    let filter = ListingsFilter {
+        base: ListingsFilterBase {
+            min_msrp: Some(80_000),
+            max_msrp: Some(25_000),
+            ..ListingsFilterBase::default()
+        },
+        ..ListingsFilter::default()
+    };
+    assert_invalid_filter(filter.validate());
+}
+
+#[cfg(phase_contracts)]
+#[test]
+fn listings_inverted_days_on_market_range_is_invalid() {
+    let filter = ListingsFilter {
+        base: ListingsFilterBase {
+            min_days_on_market: Some(90),
+            max_days_on_market: Some(1),
+            ..ListingsFilterBase::default()
+        },
+        ..ListingsFilter::default()
+    };
+    assert_invalid_filter(filter.validate());
+}
+
+#[cfg(phase_contracts)]
+#[test]
 fn listings_seating_capacity_zero_is_invalid() {
     let filter = ListingsFilter {
         base: ListingsFilterBase {
@@ -1089,6 +1194,56 @@ fn dealer_filter_limit_over_100_is_invalid() {
         ..DealerFilter::default()
     };
     assert_invalid_filter(filter.validate());
+}
+
+#[cfg(phase_contracts)]
+#[test]
+fn dealer_filter_blank_make_element_is_invalid() {
+    let filter = DealerFilter {
+        make: Some(vec!["Toyota".to_string(), "  ".to_string()]),
+        ..DealerFilter::default()
+    };
+    assert_invalid_filter(filter.validate());
+}
+
+#[cfg(phase_contracts)]
+#[test]
+fn dealer_filter_empty_make_element_is_invalid() {
+    let filter = DealerFilter {
+        make: Some(vec!["".to_string()]),
+        ..DealerFilter::default()
+    };
+    assert_invalid_filter(filter.validate());
+}
+
+#[cfg(phase_contracts)]
+#[test]
+fn dealer_filter_blank_q_is_invalid() {
+    let filter = DealerFilter {
+        q: Some("   ".to_string()),
+        ..DealerFilter::default()
+    };
+    assert_invalid_filter(filter.validate());
+}
+
+#[cfg(phase_contracts)]
+#[test]
+fn dealer_filter_empty_q_is_invalid() {
+    let filter = DealerFilter {
+        q: Some("".to_string()),
+        ..DealerFilter::default()
+    };
+    assert_invalid_filter(filter.validate());
+}
+
+#[cfg(phase_contracts)]
+#[test]
+fn dealer_filter_country_emitted() {
+    let filter = DealerFilter {
+        country: Some(CountryCode::new("US").unwrap()),
+        ..DealerFilter::default()
+    };
+    assert_eq!(param(&filter.to_params(), "country").as_deref(), Some("US"));
 }
 
 // ── Phase 3.6: FacetField wire values ────────────────────────────────────────

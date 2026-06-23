@@ -802,6 +802,26 @@ mod tests {
         assert!(Longitude::new(-180.001).is_err());
     }
 
+    #[test]
+    fn latitude_rejects_nan() {
+        assert!(Latitude::new(f64::NAN).is_err());
+    }
+
+    #[test]
+    fn latitude_rejects_infinity() {
+        assert!(Latitude::new(f64::INFINITY).is_err());
+    }
+
+    #[test]
+    fn longitude_rejects_nan() {
+        assert!(Longitude::new(f64::NAN).is_err());
+    }
+
+    #[test]
+    fn longitude_rejects_infinity() {
+        assert!(Longitude::new(f64::INFINITY).is_err());
+    }
+
     // RadiusMiles
 
     #[test]

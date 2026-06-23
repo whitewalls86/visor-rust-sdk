@@ -110,6 +110,22 @@ impl DealerFilter {
                 });
             }
         }
+        if let Some(makes) = &self.make {
+            for m in makes {
+                if m.trim().is_empty() {
+                    return Err(VisorError::InvalidFilter {
+                        message: "make contains a blank element".to_string(),
+                    });
+                }
+            }
+        }
+        if let Some(q) = &self.q {
+            if q.trim().is_empty() {
+                return Err(VisorError::InvalidFilter {
+                    message: "q must not be blank".to_string(),
+                });
+            }
+        }
         Ok(())
     }
 }
