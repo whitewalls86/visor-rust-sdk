@@ -92,7 +92,7 @@ should serialize as comma-separated lists.
 | `make` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `model` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `trim` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
-| `year` | `Option<Vec<i32>>` | `Option<Vec<u16>>` or `Option<Vec<u32>>` | comma-separated | sensible model-year range |
+| `year` | `Option<Vec<i32>>` | `Option<Vec<u16>>` | comma-separated | sensible model-year range |
 | `body_type` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `transmission` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `drivetrain` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
@@ -138,8 +138,9 @@ should serialize as comma-separated lists.
 | `Franchise` | `franchise` |
 | `Independent` | `independent` |
 
-Add `uuid` as a dependency in Phase 4. The API docs identify dealer IDs as UUIDs,
-and using `uuid::Uuid` is clearer than hand-validating strings.
+`uuid` was added as a dependency in Phase 3.5 and `dealer_id` is already
+`Vec<uuid::Uuid>` in the model. Phase 4 should serialize `Uuid` values
+as hyphenated strings.
 
 ## Inventory Status Filters
 
@@ -218,7 +219,7 @@ The API exposes separate wire params, but the valid combinations are structured:
 |---|---|---|---|---|
 | `latitude` | `Option<f64>` | `Latitude` inside `GeoOrigin` | decimal string | `-90..=90` |
 | `longitude` | `Option<f64>` | `Longitude` inside `GeoOrigin` | decimal string | `-180..=180` |
-| `postal_code` | `Option<String>` | `PostalCode` inside `GeoOrigin` | string | exactly five ASCII digits |
+| `postal_code` | `Option<String>` | `PostalCode` inside `GeoOrigin` | string | US ZIP or Canadian postal code; normalized by `PostalCode` |
 | `radius` | `Option<f64>` | `RadiusMiles` inside `GeoFilter::Radius` | decimal string | positive; max `500`; requires origin |
 | `bbox` | `Option<BBox>` | `GeoFilter::BBox(BBox)` | `west,south,east,north` | cannot combine with radius; max diagonal `1000` miles |
 
@@ -287,7 +288,7 @@ lists.
 | `exclude_make` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `exclude_model` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
 | `exclude_trim` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
-| `exclude_year` | `Option<Vec<i32>>` | `Option<Vec<u16>>` or `Option<Vec<u32>>` | comma-separated | sensible model-year range |
+| `exclude_year` | `Option<Vec<i32>>` | `Option<Vec<u16>>` | comma-separated | sensible model-year range |
 | `exclude_state` | `Option<Vec<String>>` | `Option<Vec<StateCode>>` | comma-separated | two ASCII letters; normalize to uppercase |
 | `exclude_inventory_type` | `Option<Vec<String>>` | `Option<Vec<InventoryType>>` | comma-separated | enum values only |
 | `exclude_body_type` | `Option<Vec<String>>` | same | comma-separated | non-empty values |
@@ -329,7 +330,7 @@ Local validation should return `VisorError::InvalidFilter`.
 - VIN patterns may contain VIN characters, `?`, and a terminal `*`; `*` cannot
   appear in the middle.
 - `state` and `exclude_state` are two-letter codes.
-- `postal_code` is exactly five ASCII digits.
+- `postal_code` is a US ZIP or Canadian postal code; validated and normalized by `PostalCode::new`.
 - `latitude` is in `-90..=90`.
 - `longitude` is in `-180..=180`.
 - `radius` is positive and `<= 500`.
