@@ -2,6 +2,13 @@
 
 Building a Rust SDK for the Visor Public API (https://api.visor.vin/v1). This document guides implementation of the core SDK architecture.
 
+> **Phase 4 filter note:** The filter examples in this broad handoff predate the
+> typed model work completed in Phases 3.5 and 3.6. For current filter shapes,
+> validation, serialization, and tests, use
+> `docs/design/phase-3-5-listings-filter-contract.md` and
+> `docs/design/phase-3-6-facets-contract.md`. Those documents supersede
+> conflicting filter examples here.
+
 ## Source Of Truth
 
 Use the endpoint docs in `docs/api/` as the primary API contract:

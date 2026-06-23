@@ -1,15 +1,6 @@
 use chrono::NaiveDate;
 use serde::Deserialize;
 
-/// Bounding box for map-viewport filtering: west, south, east, north.
-#[derive(Debug, Clone)]
-pub struct BBox {
-    pub west: f64,
-    pub south: f64,
-    pub east: f64,
-    pub north: f64,
-}
-
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct VehicleOption {
     pub code: String,

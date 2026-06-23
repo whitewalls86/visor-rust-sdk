@@ -9,7 +9,7 @@ use crate::models::base::{ListingInclude, ListingsFilterBase, SortOrder};
 use crate::models::common::{
     DealerRef, Pagination, PriceHistoryEntry, VehicleOption, VehicleRecord,
 };
-use crate::models::filter_types::ListingField;
+use crate::models::filter_types::{GeoFilter, ListingField};
 
 pub struct ListingsFilter {
     pub base: ListingsFilterBase,
@@ -34,13 +34,57 @@ impl Default for ListingsFilter {
 }
 
 impl ListingsFilter {
-    /// Serialize to query-string params. Stub — Phase 4 TODO.
+    /// Serialize to query-string params.
     pub fn to_params(&self) -> Vec<(String, String)> {
-        vec![]
+        let mut params = Vec::new();
+        params.push(("limit".to_string(), self.limit.to_string()));
+        params.push(("offset".to_string(), self.offset.to_string()));
+        params.push(("sort".to_string(), self.sort.as_str().to_string()));
+        if let Some(fields) = &self.fields {
+            if !fields.is_empty() {
+                let joined = fields
+                    .iter()
+                    .map(|f| f.as_str())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                params.push(("fields".to_string(), joined));
+            }
+        }
+        if let Some(includes) = &self.include {
+            if !includes.is_empty() {
+                let joined = includes
+                    .iter()
+                    .map(|i| i.as_str())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                params.push(("include".to_string(), joined));
+            }
+        }
+        self.base.append_params(&mut params);
+        params
     }
 
-    /// Validate filter constraints before sending a request. Stub — Phase 4 TODO.
+    /// Validate filter constraints before sending a request.
     pub fn validate(&self) -> Result<(), VisorError> {
+        if self.limit > 100 {
+            return Err(VisorError::InvalidFilter {
+                message: format!("limit must be <= 100, got {}", self.limit),
+            });
+        }
+        if matches!(self.sort, SortOrder::Distance) {
+            let has_origin = matches!(
+                &self.base.geo,
+                Some(GeoFilter::Origin(_)) | Some(GeoFilter::Radius { .. })
+            );
+            if !has_origin {
+                return Err(VisorError::InvalidFilter {
+                    message:
+                        "sort=distance requires a geographic origin (postal code or coordinates)"
+                            .to_string(),
+                });
+            }
+        }
+        self.base.validate()?;
         Ok(())
     }
 }

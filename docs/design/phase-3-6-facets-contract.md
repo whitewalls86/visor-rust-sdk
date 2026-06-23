@@ -175,7 +175,7 @@ Validation:
 
 ## Sorting
 
-`FacetSort` already exists. Phase 4 should add `as_str()` and validation.
+`FacetSort` already exists with `as_str()` implemented. Phase 4 adds validation.
 
 | Wire param | Current shape | Recommended Rust shape | Serialization | Validation |
 |---|---|---|---|---|
@@ -237,6 +237,8 @@ types.
 - Emit `metric` only when set.
 - Reuse the shared `ListingsFilterBase` serialization logic for all inherited
   listing filters.
+- Treat empty optional base-filter vectors as omitted and apply the same
+  free-text element validation used by `ListingsFilter`.
 - Preserve parameter ordering in tests by returning `Vec<(String, String)>`.
 
 Recommended ordering:
@@ -263,6 +265,11 @@ Local validation should return `VisorError::InvalidFilter`.
   - geo constraints are valid
   - inventory-mode constraints are valid
   - empty strings in free-text list filters are rejected
+
+`FacetsFilter::validate()` must call `self.base.validate()` in addition to its
+facet-specific checks. `FacetsFilter::to_params()` must use the shared
+`ListingsFilterBase::append_params()` implementation rather than maintaining a
+second field-by-field serializer.
 
 ## Response Models
 
@@ -295,3 +302,6 @@ Add contract tests for:
 - non-count metric with two facets validation failure
 - non-count metric with numeric range facet validation failure
 - `FacetSort::Metric` without aggregate metric validation failure
+- facet-specific params composed with representative shared base params
+- shared base validation errors propagated through `FacetsFilter::validate()`
+- empty shared-filter vectors omitted from facet requests
