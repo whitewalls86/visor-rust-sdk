@@ -56,10 +56,18 @@ impl AsyncVisorClient {
     pub async fn get_listing(
         &self,
         id: &str,
-        _include: Option<Vec<ListingInclude>>,
+        include: Option<Vec<ListingInclude>>,
     ) -> Result<ListingDetail, VisorError> {
-        // Phase 4 TODO: serialize include params via ListingInclude::as_str()
-        self.transport.get(&format!("/listings/{id}"), vec![]).await
+        let mut params = Vec::new();
+        if let Some(includes) = include {
+            if !includes.is_empty() {
+                let s: Vec<&str> = includes.iter().map(|i| i.as_str()).collect();
+                params.push(("include".to_string(), s.join(",")));
+            }
+        }
+        self.transport
+            .get_one(&format!("/listings/{id}"), params)
+            .await
     }
 
     // ── Stub methods — Phase 5 TODO ───────────────────────────────────────────

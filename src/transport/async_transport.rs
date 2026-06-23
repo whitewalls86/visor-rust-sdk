@@ -18,6 +18,16 @@ impl AsyncVisorTransport {
         Self { client, config }
     }
 
+    /// Fetch a single-resource endpoint whose response is `{ "data": T, "meta": {} }`.
+    pub(crate) async fn get_one<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        params: Vec<(String, String)>,
+    ) -> Result<T, VisorError> {
+        let envelope: super::DataEnvelope<T> = self.get(path, params).await?;
+        Ok(envelope.data)
+    }
+
     pub(crate) async fn get<T: DeserializeOwned>(
         &self,
         path: &str,

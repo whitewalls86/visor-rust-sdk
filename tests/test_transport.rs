@@ -1,6 +1,8 @@
 use serde_json::json;
-use visor::{AsyncVisorClient, ClientConfig, ListingsFilter, VisorClient, VisorError};
-use wiremock::matchers::{header, method, path};
+use visor::{
+    AsyncVisorClient, ClientConfig, ListingInclude, ListingsFilter, VisorClient, VisorError,
+};
+use wiremock::matchers::{header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 fn async_client(base_url: String) -> AsyncVisorClient {
@@ -242,6 +244,70 @@ async fn async_trailing_slash_on_base_url_is_normalized() {
     .filter_listings(&ListingsFilter::default())
     .await
     .expect("trailing slash should be normalized");
+}
+
+// ── get_listing: data envelope unwrap ────────────────────────────────────────
+
+fn listing_detail_body() -> serde_json::Value {
+    json!({
+        "data": {
+            "id": "abc123",
+            "vin": "1HGCM82633A123456",
+            "status": "active",
+            "inventory_type": "used",
+            "dealer": {
+                "dealer_id": "d1",
+                "name": "Test Dealer",
+                "city": "San Francisco",
+                "state": "CA"
+            },
+            "vehicle": {
+                "vin": "1HGCM82633A123456",
+                "status": "active",
+                "build": { "year": 2020, "make": "Honda", "model": "Accord" }
+            }
+        },
+        "meta": {}
+    })
+}
+
+#[tokio::test]
+async fn async_get_listing_decodes_data_envelope() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/listings/abc123"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(listing_detail_body()))
+        .mount(&server)
+        .await;
+
+    let detail = async_client(server.uri())
+        .get_listing("abc123", None)
+        .await
+        .expect("should decode { data: ListingDetail } envelope");
+
+    assert_eq!(detail.id, "abc123");
+    assert_eq!(detail.vin, "1HGCM82633A123456");
+}
+
+#[tokio::test]
+async fn async_get_listing_sends_include_query_param() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/listings/abc123"))
+        .and(query_param("include", "price_history,options"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(listing_detail_body()))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    async_client(server.uri())
+        .get_listing(
+            "abc123",
+            Some(vec![ListingInclude::PriceHistory, ListingInclude::Options]),
+        )
+        .await
+        .expect("should send include query param");
+    // MockServer verifies expect(1) on drop
 }
 
 // ── Malformed error body → fallback to unknown_error ─────────────────────────

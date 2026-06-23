@@ -22,6 +22,13 @@ fn build_url_with_params(base_url: &str, path: &str, params: &[(String, String)]
     url
 }
 
+/// Wraps single-resource responses shaped as `{ "data": T, "meta": {} }`.
+/// Used by transport methods that unwrap detail endpoints.
+#[derive(serde::Deserialize)]
+pub(super) struct DataEnvelope<T> {
+    pub(super) data: T,
+}
+
 #[derive(serde::Deserialize)]
 struct ErrorEnvelope {
     error: Option<ErrorDetail>,
