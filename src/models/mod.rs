@@ -15,8 +15,8 @@ pub use dealers::{
     DealerAddress, DealerDetail, DealerFilter, DealerSummary, DealerType, DealersPage,
 };
 pub use facets::{
-    FacetBucket, FacetSort, FacetsData, FacetsFilter, FacetsMeta, FacetsResponse, FieldStats,
-    RangeBucket, RangeFacet,
+    FacetBucket, FacetField, FacetMetric, FacetMetricAggregate, FacetMetricMeasure, FacetSort,
+    FacetsData, FacetsFilter, FacetsMeta, FacetsResponse, FieldStats, RangeBucket, RangeFacet,
 };
 pub use filter_types::{
     AvailabilityStatus, CountryCode, GeoFilter, GeoOrigin, HistoryKeyword, InventoryModeFilter,

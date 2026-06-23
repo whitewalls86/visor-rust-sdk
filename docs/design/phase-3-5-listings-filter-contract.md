@@ -35,7 +35,8 @@ Primary source: `docs/api/filter-listings.md`.
   - US ZIP: exactly five ASCII digits; leading zeros are preserved.
   - Canadian: compact `A1A1A1` or spaced `A1A 1A1`; both normalized to the
     spaced uppercase form. All alphabetic positions reject the letters excluded
-    by Canada Post: `D`, `F`, `I`, `O`, `Q`, `U`.
+    by Canada Post: `D`, `F`, `I`, `O`, `Q`, `U`. The first position
+    additionally rejects `W` and `Z`, which are not assigned as FSA letters.
 - Keep response models tolerant; these stricter types are for caller-provided
   filters.
 
@@ -240,6 +241,7 @@ pub enum GeoOrigin {
 }
 
 pub enum GeoFilter {
+    Origin(GeoOrigin),
     Radius {
         origin: GeoOrigin,
         miles: RadiusMiles,
@@ -250,9 +252,10 @@ pub enum GeoFilter {
 
 This encodes:
 
+- `origin` anchors distance sorting (`sort=distance`, `distance_miles`) without constraining by radius
 - `radius` requires exactly one origin: postal code or latitude/longitude
 - latitude and longitude are supplied together
-- `bbox` and `radius` are mutually exclusive
+- `bbox`, `radius`, and `origin` are mutually exclusive
 
 `PostalCode` stores a string, not a number, so leading zeros are preserved.
 

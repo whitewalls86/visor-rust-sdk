@@ -1,12 +1,18 @@
 use visor::{InventoryModeFilter, ListingsFilter, ListingsFilterBase};
 
+// Phase 3.6 types — always available, used in unconditional tests.
+use visor::{
+    FacetField, FacetMetric, FacetMetricAggregate, FacetMetricMeasure, FacetSort, FacetsFilter,
+    VisorError,
+};
+
 #[cfg(phase_contracts)]
 use uuid::Uuid;
 
 #[cfg(phase_contracts)]
 use visor::{
-    BBox, DealerFilter, DealerType, FacetSort, FacetsFilter, GeoFilter, HistoryKeyword,
-    InventoryType, ListingField, ListingInclude, SortOrder, StateCode, VisorError,
+    BBox, DealerFilter, DealerType, GeoFilter, HistoryKeyword, InventoryType, ListingField,
+    ListingInclude, SortOrder, StateCode,
 };
 
 fn has_key(params: &[(String, String)], key: &str) -> bool {
@@ -247,7 +253,7 @@ fn history_keywords_emitted_comma_separated() {
 #[cfg(phase_contracts)]
 #[test]
 fn facets_filter_always_emits_sort() {
-    let filter = FacetsFilter::new(vec!["make".to_string()]);
+    let filter = FacetsFilter::new(vec![FacetField::Make]);
     let params = filter.to_params();
     assert!(
         has_key(&params, "sort"),
@@ -266,7 +272,7 @@ fn facet_sort_wire_values() {
         (FacetSort::MetricDesc, "-metric"),
     ];
     for (sort, expected) in cases {
-        let mut filter = FacetsFilter::new(vec!["make".to_string()]);
+        let mut filter = FacetsFilter::new(vec![FacetField::Make]);
         filter.sort = sort;
         assert_eq!(
             param(&filter.to_params(), "sort").as_deref(),
@@ -353,9 +359,10 @@ fn facets_filter_empty_facets_is_invalid() {
 
 #[cfg(phase_contracts)]
 #[test]
-fn dealer_filter_over_50_ids_is_invalid() {
-    // dealer_id takes Vec<Uuid>; generate 51 deterministic nil-variant UUIDs.
-    let ids: Vec<Uuid> = (0u128..=50).map(Uuid::from_u128).collect(); // 51 entries
+fn dealer_filter_over_100_ids_is_invalid() {
+    // dealer_id takes Vec<Uuid>; generate 101 deterministic nil-variant UUIDs.
+    // DealerFilter allows up to 100 IDs (search-dealers.md line 66).
+    let ids: Vec<Uuid> = (0u128..=100).map(Uuid::from_u128).collect(); // 101 entries
     let filter = DealerFilter {
         dealer_id: Some(ids),
         ..DealerFilter::default()
@@ -371,4 +378,347 @@ fn dealer_filter_limit_over_100_is_invalid() {
         ..DealerFilter::default()
     };
     assert_invalid_filter(filter.validate());
+}
+
+// ── Phase 3.6: FacetField wire values ────────────────────────────────────────
+
+#[test]
+fn facet_field_wire_values() {
+    let cases = [
+        (FacetField::Make, "make"),
+        (FacetField::Model, "model"),
+        (FacetField::InventoryType, "inventory_type"),
+        (FacetField::Year, "year"),
+        (FacetField::Trim, "trim"),
+        (FacetField::Version, "version"),
+        (FacetField::BaseExteriorColor, "base_exterior_color"),
+        (FacetField::ExteriorColor, "exterior_color"),
+        (FacetField::BaseInteriorColor, "base_interior_color"),
+        (FacetField::InteriorColor, "interior_color"),
+        (FacetField::SeatingCapacity, "seating_capacity"),
+        (FacetField::Doors, "doors"),
+        (FacetField::Engine, "engine"),
+        (FacetField::State, "state"),
+        (FacetField::Drivetrain, "drivetrain"),
+        (FacetField::AssemblyLocation, "assembly_location"),
+        (FacetField::AssemblyCountry, "assembly_country"),
+        (FacetField::Transmission, "transmission"),
+        (FacetField::FuelType, "fuel_type"),
+        (FacetField::BodyType, "body_type"),
+        (FacetField::Cylinders, "cylinders"),
+        (FacetField::DealerType, "dealer_type"),
+        (FacetField::AvailabilityStatus, "availability_status"),
+        (FacetField::OptionsPackages, "options_packages"),
+        (FacetField::Features, "features"),
+        (FacetField::Keywords, "keywords"),
+        (FacetField::Price, "price"),
+        (FacetField::Msrp, "msrp"),
+        (FacetField::Miles, "miles"),
+        (FacetField::DaysOnMarket, "days_on_market"),
+    ];
+    for (field, expected) in cases {
+        assert_eq!(
+            field.as_str(),
+            expected,
+            "wrong wire value for {expected:?}"
+        );
+    }
+}
+
+#[test]
+fn facet_field_categorical_classification() {
+    let categorical = [
+        FacetField::Make,
+        FacetField::Model,
+        FacetField::InventoryType,
+        FacetField::Year,
+        FacetField::Trim,
+        FacetField::Version,
+        FacetField::BaseExteriorColor,
+        FacetField::ExteriorColor,
+        FacetField::BaseInteriorColor,
+        FacetField::InteriorColor,
+        FacetField::SeatingCapacity,
+        FacetField::Doors,
+        FacetField::Engine,
+        FacetField::State,
+        FacetField::Drivetrain,
+        FacetField::AssemblyLocation,
+        FacetField::AssemblyCountry,
+        FacetField::Transmission,
+        FacetField::FuelType,
+        FacetField::BodyType,
+        FacetField::Cylinders,
+        FacetField::DealerType,
+        FacetField::AvailabilityStatus,
+        FacetField::OptionsPackages,
+        FacetField::Features,
+        FacetField::Keywords,
+    ];
+    for field in categorical {
+        assert!(
+            field.is_categorical(),
+            "'{}' should be categorical",
+            field.as_str()
+        );
+        assert!(
+            !field.is_numeric_range(),
+            "'{}' should not be numeric range",
+            field.as_str()
+        );
+    }
+}
+
+#[test]
+fn facet_field_numeric_range_classification() {
+    let numeric = [
+        FacetField::Price,
+        FacetField::Msrp,
+        FacetField::Miles,
+        FacetField::DaysOnMarket,
+    ];
+    for field in numeric {
+        assert!(
+            field.is_numeric_range(),
+            "'{}' should be numeric range",
+            field.as_str()
+        );
+        assert!(
+            !field.is_categorical(),
+            "'{}' should not be categorical",
+            field.as_str()
+        );
+    }
+}
+
+#[test]
+fn facet_field_year_is_categorical() {
+    assert!(FacetField::Year.is_categorical());
+    assert!(!FacetField::Year.is_numeric_range());
+}
+
+// ── Phase 3.6: FacetMetricMeasure wire values ─────────────────────────────────
+
+#[test]
+fn facet_metric_measure_wire_values() {
+    let cases = [
+        (FacetMetricMeasure::Price, "price"),
+        (FacetMetricMeasure::Miles, "miles"),
+        (FacetMetricMeasure::Msrp, "msrp"),
+        (FacetMetricMeasure::DaysOnMarket, "days_on_market"),
+        (FacetMetricMeasure::DiscountFromMsrp, "discount_from_msrp"),
+    ];
+    for (measure, expected) in cases {
+        assert_eq!(
+            measure.as_str(),
+            expected,
+            "wrong wire value for {expected:?}"
+        );
+    }
+}
+
+// ── Phase 3.6: FacetMetricAggregate wire values ───────────────────────────────
+
+#[test]
+fn facet_metric_aggregate_wire_values() {
+    let cases = [
+        (FacetMetricAggregate::Mean, "mean"),
+        (FacetMetricAggregate::P5, "p5"),
+        (FacetMetricAggregate::P25, "p25"),
+        (FacetMetricAggregate::Median, "median"),
+        (FacetMetricAggregate::P75, "p75"),
+        (FacetMetricAggregate::P95, "p95"),
+    ];
+    for (agg, expected) in cases {
+        assert_eq!(agg.as_str(), expected, "wrong wire value for {expected:?}");
+    }
+}
+
+// ── Phase 3.6: FacetMetric serialization ─────────────────────────────────────
+
+#[test]
+fn facet_metric_count_serializes_to_count() {
+    assert_eq!(FacetMetric::Count.as_str(), "count");
+}
+
+#[test]
+fn facet_metric_aggregate_price_p95() {
+    let metric = FacetMetric::Aggregate {
+        measure: FacetMetricMeasure::Price,
+        aggregate: FacetMetricAggregate::P95,
+    };
+    assert_eq!(metric.as_str(), "price.p95");
+}
+
+#[test]
+fn facet_metric_aggregate_days_on_market_median() {
+    let metric = FacetMetric::Aggregate {
+        measure: FacetMetricMeasure::DaysOnMarket,
+        aggregate: FacetMetricAggregate::Median,
+    };
+    assert_eq!(metric.as_str(), "days_on_market.median");
+}
+
+#[test]
+fn facet_metric_aggregate_discount_from_msrp_mean() {
+    let metric = FacetMetric::Aggregate {
+        measure: FacetMetricMeasure::DiscountFromMsrp,
+        aggregate: FacetMetricAggregate::Mean,
+    };
+    assert_eq!(metric.as_str(), "discount_from_msrp.mean");
+}
+
+// ── Phase 3.6: FacetSort wire values ─────────────────────────────────────────
+
+#[test]
+fn facet_sort_as_str_wire_values() {
+    assert_eq!(FacetSort::Count.as_str(), "count");
+    assert_eq!(FacetSort::CountDesc.as_str(), "-count");
+    assert_eq!(FacetSort::Metric.as_str(), "metric");
+    assert_eq!(FacetSort::MetricDesc.as_str(), "-metric");
+}
+
+// ── Phase 3.6: FacetsFilter::new defaults ────────────────────────────────────
+
+#[test]
+fn facets_filter_new_default_sort_is_count_desc() {
+    let filter = FacetsFilter::new(vec![FacetField::Make]);
+    assert!(matches!(filter.sort, FacetSort::CountDesc));
+}
+
+#[test]
+fn facets_filter_new_metric_is_none() {
+    let filter = FacetsFilter::new(vec![FacetField::Make]);
+    assert!(filter.metric.is_none());
+}
+
+#[test]
+fn facets_filter_new_facet_value_limit_is_none() {
+    let filter = FacetsFilter::new(vec![FacetField::Make]);
+    assert!(filter.facet_value_limit.is_none());
+}
+
+// ── Phase 3.6: FacetsFilter validation ───────────────────────────────────────
+
+fn assert_invalid_facet_filter(result: Result<(), VisorError>) {
+    assert!(
+        matches!(result, Err(VisorError::InvalidFilter { .. })),
+        "expected InvalidFilter, got: {result:?}"
+    );
+}
+
+#[test]
+fn facets_filter_valid_single_categorical_facet() {
+    assert!(FacetsFilter::new(vec![FacetField::Make]).validate().is_ok());
+}
+
+#[test]
+fn facets_filter_valid_multiple_categorical_facets_with_count_metric() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make, FacetField::Model]);
+    filter.metric = Some(FacetMetric::Count);
+    assert!(filter.validate().is_ok());
+}
+
+#[test]
+fn facets_filter_empty_facets_rejected() {
+    assert_invalid_facet_filter(FacetsFilter::new(vec![]).validate());
+}
+
+#[test]
+fn facets_filter_facet_value_limit_100_is_valid() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make]);
+    filter.facet_value_limit = Some(100);
+    assert!(filter.validate().is_ok());
+}
+
+#[test]
+fn facets_filter_facet_value_limit_over_100_rejected() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make]);
+    filter.facet_value_limit = Some(101);
+    assert_invalid_facet_filter(filter.validate());
+}
+
+#[test]
+fn facets_filter_aggregate_metric_requires_exactly_one_facet_zero_rejected() {
+    // Zero facets is already caught by the empty-facets check; validate ordering here.
+    let mut filter = FacetsFilter::new(vec![]);
+    filter.metric = Some(FacetMetric::Aggregate {
+        measure: FacetMetricMeasure::Price,
+        aggregate: FacetMetricAggregate::P95,
+    });
+    assert_invalid_facet_filter(filter.validate());
+}
+
+#[test]
+fn facets_filter_aggregate_metric_with_multiple_facets_rejected() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make, FacetField::Model]);
+    filter.metric = Some(FacetMetric::Aggregate {
+        measure: FacetMetricMeasure::Price,
+        aggregate: FacetMetricAggregate::Mean,
+    });
+    assert_invalid_facet_filter(filter.validate());
+}
+
+#[test]
+fn facets_filter_aggregate_metric_with_numeric_range_facet_rejected() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Price]);
+    filter.metric = Some(FacetMetric::Aggregate {
+        measure: FacetMetricMeasure::Price,
+        aggregate: FacetMetricAggregate::Median,
+    });
+    assert_invalid_facet_filter(filter.validate());
+}
+
+#[test]
+fn facets_filter_aggregate_metric_with_categorical_facet_valid() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make]);
+    filter.metric = Some(FacetMetric::Aggregate {
+        measure: FacetMetricMeasure::Price,
+        aggregate: FacetMetricAggregate::P95,
+    });
+    assert!(filter.validate().is_ok());
+}
+
+#[test]
+fn facets_filter_metric_sort_without_aggregate_metric_rejected() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make]);
+    filter.sort = FacetSort::Metric;
+    assert_invalid_facet_filter(filter.validate());
+}
+
+#[test]
+fn facets_filter_metric_desc_sort_without_aggregate_metric_rejected() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make]);
+    filter.sort = FacetSort::MetricDesc;
+    assert_invalid_facet_filter(filter.validate());
+}
+
+#[test]
+fn facets_filter_metric_sort_with_count_metric_rejected() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make]);
+    filter.metric = Some(FacetMetric::Count);
+    filter.sort = FacetSort::Metric;
+    assert_invalid_facet_filter(filter.validate());
+}
+
+#[test]
+fn facets_filter_metric_sort_with_aggregate_metric_valid() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make]);
+    filter.metric = Some(FacetMetric::Aggregate {
+        measure: FacetMetricMeasure::Price,
+        aggregate: FacetMetricAggregate::P95,
+    });
+    filter.sort = FacetSort::MetricDesc;
+    assert!(filter.validate().is_ok());
+}
+
+#[test]
+fn facets_filter_count_sort_with_aggregate_metric_valid() {
+    let mut filter = FacetsFilter::new(vec![FacetField::Make]);
+    filter.metric = Some(FacetMetric::Aggregate {
+        measure: FacetMetricMeasure::Miles,
+        aggregate: FacetMetricAggregate::Mean,
+    });
+    filter.sort = FacetSort::Count;
+    assert!(filter.validate().is_ok());
 }
