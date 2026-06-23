@@ -2,8 +2,8 @@ use uuid::Uuid;
 
 use crate::models::dealers::DealerType;
 use crate::models::filter_types::{
-    AvailabilityStatus, CountryCode, GeoFilter, HistoryKeyword, InventoryModeFilter, InventoryType,
-    StateCode, VinPattern,
+    AvailabilityStatus, GeoFilter, HistoryKeyword, InventoryModeFilter, InventoryType, StateCode,
+    VinPattern,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -63,7 +63,7 @@ pub struct ListingsFilterBase {
     pub features: Option<Vec<String>>,
     /// Pipe-separated on the wire.
     pub assembly_location: Option<Vec<String>>,
-    pub assembly_country: Option<Vec<CountryCode>>,
+    pub assembly_country: Option<Vec<String>>,
     pub vin_pattern: Option<Vec<VinPattern>>,
     pub keywords: Option<Vec<HistoryKeyword>>,
 
@@ -109,7 +109,7 @@ pub struct ListingsFilterBase {
     pub exclude_engine: Option<Vec<String>>,
     /// Plus-separated on the wire.
     pub exclude_assembly_location: Option<Vec<String>>,
-    pub exclude_assembly_country: Option<Vec<CountryCode>>,
+    pub exclude_assembly_country: Option<Vec<String>>,
     pub exclude_exterior_color: Option<Vec<String>>,
     pub exclude_interior_color: Option<Vec<String>>,
     pub exclude_base_exterior_color: Option<Vec<String>>,

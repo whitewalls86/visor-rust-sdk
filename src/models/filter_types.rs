@@ -164,7 +164,7 @@ impl HistoryKeyword {
 
 // ── Domain / input types ──────────────────────────────────────────────────
 
-/// Two-letter US state code, normalized to uppercase ASCII.
+/// Two-letter dealer state/region code, normalized to uppercase ASCII.
 #[derive(Debug, Clone)]
 pub struct StateCode(String);
 
@@ -206,23 +206,83 @@ impl CountryCode {
     }
 }
 
-/// Five-digit US postal code. Stored as a string to preserve leading zeros.
+/// US ZIP code or Canadian postal code.
+///
+/// **US ZIP**: exactly five ASCII digits; leading zeros are preserved
+/// (e.g. `"02134"` stays `"02134"`).
+///
+/// **Canadian**: `A1A 1A1` (spaced) or compact `A1A1A1`; both are accepted
+/// and normalized to the spaced `A1A 1A1` form with uppercase letters.
+/// All alphabetic positions reject the letters excluded by Canada Post:
+/// `D`, `F`, `I`, `O`, `Q`, `U`.
 #[derive(Debug, Clone)]
 pub struct PostalCode(String);
+
+/// Returns true if `b` is a valid alphabetic character in a Canadian postal code.
+/// Canada Post excludes D, F, I, O, Q, U from all alphabetic positions.
+fn is_canadian_postal_alpha(b: u8) -> bool {
+    let u = b.to_ascii_uppercase();
+    u.is_ascii_alphabetic() && !matches!(u, b'D' | b'F' | b'I' | b'O' | b'Q' | b'U')
+}
 
 impl PostalCode {
     pub fn new(code: &str) -> Result<Self, VisorError> {
         let code = code.trim();
+
+        // US ZIP: exactly five ASCII digits.
         if code.len() == 5 && code.bytes().all(|b| b.is_ascii_digit()) {
-            Ok(Self(code.to_string()))
-        } else {
-            Err(VisorError::InvalidFilter {
-                message: format!(
-                    "postal code must be exactly five ASCII digits, got: {:?}",
-                    code
-                ),
-            })
+            return Ok(Self(code.to_string()));
         }
+
+        // Canadian: accept compact `A1A1A1` (6 chars) or spaced `A1A 1A1` (7 chars).
+        // Both are normalized to the spaced form.
+        let compact: Vec<u8> = if code.len() == 6 {
+            code.bytes().collect()
+        } else if code.len() == 7 && code.as_bytes()[3] == b' ' {
+            let mut v: Vec<u8> = code.bytes().collect();
+            v.remove(3);
+            v
+        } else {
+            return Err(VisorError::InvalidFilter {
+                message: format!("invalid postal code {:?}; expected a 5-digit US ZIP or a Canadian postal code in A1A1A1 or A1A 1A1 form", code),
+            });
+        };
+
+        // Pattern: alpha digit alpha digit alpha digit
+        let alpha_positions = [0usize, 2, 4];
+        let digit_positions = [1usize, 3, 5];
+        for &i in &alpha_positions {
+            if !is_canadian_postal_alpha(compact[i]) {
+                return Err(VisorError::InvalidFilter {
+                    message: format!(
+                        "invalid character {:?} at position {} of Canadian postal code {:?}; \
+                         letters D, F, I, O, Q, U are not used",
+                        compact[i] as char, i, code
+                    ),
+                });
+            }
+        }
+        for &i in &digit_positions {
+            if !compact[i].is_ascii_digit() {
+                return Err(VisorError::InvalidFilter {
+                    message: format!(
+                        "expected digit at position {} of Canadian postal code {:?}, got {:?}",
+                        i, code, compact[i] as char
+                    ),
+                });
+            }
+        }
+
+        let normalized = format!(
+            "{}{}{} {}{}{}",
+            compact[0].to_ascii_uppercase() as char,
+            compact[1] as char,
+            compact[2].to_ascii_uppercase() as char,
+            compact[3] as char,
+            compact[4].to_ascii_uppercase() as char,
+            compact[5] as char,
+        );
+        Ok(Self(normalized))
     }
 
     pub fn as_str(&self) -> &str {
@@ -293,8 +353,10 @@ impl RadiusMiles {
 /// VIN pattern for prefix/wildcard matching.
 ///
 /// VIN characters are `0-9`, `A-Z` excluding `I`, `O`, `Q`.
-/// `?` matches exactly one position anywhere.
-/// `*` matches zero-or-more characters but may only appear at the end.
+/// `?` matches exactly one position anywhere in the pattern.
+/// `*` may only appear as the final character; a bare `"*"` is intentionally
+/// accepted (it matches every VIN) because the contract is structural — `*`
+/// at end — not semantic.
 #[derive(Debug, Clone)]
 pub struct VinPattern(String);
 
@@ -469,7 +531,7 @@ mod tests {
         assert!(CountryCode::new("ß").is_err());
     }
 
-    // PostalCode
+    // PostalCode — US
 
     #[test]
     fn postal_code_accepts_five_digits() {
@@ -495,13 +557,77 @@ mod tests {
     }
 
     #[test]
-    fn postal_code_rejects_six_digits() {
+    fn postal_code_rejects_six_all_digits() {
+        // Six digits looks like a compact Canadian attempt but position 0 must be alpha.
         assert!(PostalCode::new("902100").is_err());
     }
 
     #[test]
-    fn postal_code_rejects_letters() {
+    fn postal_code_rejects_five_chars_with_letter() {
         assert!(PostalCode::new("9021A").is_err());
+    }
+
+    // PostalCode — Canadian
+
+    #[test]
+    fn postal_code_accepts_canadian_spaced() {
+        let pc = PostalCode::new("K1A 0A9").unwrap();
+        assert_eq!(pc.as_str(), "K1A 0A9");
+    }
+
+    #[test]
+    fn postal_code_accepts_canadian_compact_and_normalizes() {
+        let pc = PostalCode::new("K1A0A9").unwrap();
+        assert_eq!(pc.as_str(), "K1A 0A9");
+    }
+
+    #[test]
+    fn postal_code_normalizes_canadian_lowercase() {
+        let pc = PostalCode::new("k1a0a9").unwrap();
+        assert_eq!(pc.as_str(), "K1A 0A9");
+    }
+
+    #[test]
+    fn postal_code_normalizes_canadian_spaced_lowercase() {
+        let pc = PostalCode::new("k1a 0a9").unwrap();
+        assert_eq!(pc.as_str(), "K1A 0A9");
+    }
+
+    #[test]
+    fn postal_code_rejects_canadian_excluded_letter_d_in_fsa() {
+        assert!(PostalCode::new("D1A 0A9").is_err());
+    }
+
+    #[test]
+    fn postal_code_rejects_canadian_excluded_letter_f() {
+        assert!(PostalCode::new("K1F 0A9").is_err());
+    }
+
+    #[test]
+    fn postal_code_rejects_canadian_excluded_letter_i() {
+        assert!(PostalCode::new("K1A 0I9").is_err());
+    }
+
+    #[test]
+    fn postal_code_rejects_canadian_excluded_letter_o() {
+        assert!(PostalCode::new("O1A 0A9").is_err());
+    }
+
+    #[test]
+    fn postal_code_rejects_canadian_excluded_letter_q() {
+        assert!(PostalCode::new("Q1A 0A9").is_err());
+    }
+
+    #[test]
+    fn postal_code_rejects_canadian_excluded_letter_u() {
+        assert!(PostalCode::new("U1A 0A9").is_err());
+    }
+
+    #[test]
+    fn postal_code_rejects_wrong_length() {
+        assert!(PostalCode::new("K1A0A").is_err()); // 5 chars, not digits
+        assert!(PostalCode::new("K1A0A99").is_err()); // 7 chars but no space at index 3
+        assert!(PostalCode::new("K1A 0A").is_err()); // 6 chars with space at index 3
     }
 
     // Latitude
@@ -613,11 +739,10 @@ mod tests {
     }
 
     #[test]
-    fn vin_pattern_rejects_star_alone_as_glob() {
-        // '*' at position 0 would be position 0 != len()-1 only if len > 1;
-        // a single '*' is at index 0 which equals len()-1 so it IS valid.
-        // A bare '*' matches everything — the API allows it but it's unusual.
-        // We allow it since '*' at end is the only rule.
+    fn vin_pattern_bare_star_is_accepted() {
+        // A bare "*" satisfies the rule "* may only appear at the end" (index 0
+        // == len()-1 when len == 1). It matches every VIN. Intentional — the
+        // contract is structural, not semantic. See VinPattern doc comment.
         assert!(VinPattern::new("*").is_ok());
     }
 
