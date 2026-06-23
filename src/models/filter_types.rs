@@ -170,12 +170,12 @@ pub struct StateCode(String);
 
 impl StateCode {
     pub fn new(code: &str) -> Result<Self, VisorError> {
-        let code = code.trim().to_uppercase();
-        if code.len() == 2 && code.bytes().all(|b| b.is_ascii_alphabetic()) {
-            Ok(Self(code))
+        let trimmed = code.trim();
+        if trimmed.len() == 2 && trimmed.bytes().all(|b| b.is_ascii_alphabetic()) {
+            Ok(Self(trimmed.to_ascii_uppercase()))
         } else {
             Err(VisorError::InvalidFilter {
-                message: format!("state code must be two ASCII letters, got: {:?}", code),
+                message: format!("state code must be two ASCII letters, got: {:?}", trimmed),
             })
         }
     }
@@ -191,12 +191,12 @@ pub struct CountryCode(String);
 
 impl CountryCode {
     pub fn new(code: &str) -> Result<Self, VisorError> {
-        let code = code.trim().to_uppercase();
-        if code.len() == 2 && code.bytes().all(|b| b.is_ascii_alphabetic()) {
-            Ok(Self(code))
+        let trimmed = code.trim();
+        if trimmed.len() == 2 && trimmed.bytes().all(|b| b.is_ascii_alphabetic()) {
+            Ok(Self(trimmed.to_ascii_uppercase()))
         } else {
             Err(VisorError::InvalidFilter {
-                message: format!("country code must be two ASCII letters, got: {:?}", code),
+                message: format!("country code must be two ASCII letters, got: {:?}", trimmed),
             })
         }
     }
@@ -440,6 +440,12 @@ mod tests {
         assert!(StateCode::new("").is_err());
     }
 
+    #[test]
+    fn state_code_rejects_non_ascii_that_uppercases_to_ascii() {
+        // "ß".to_uppercase() == "SS" in Unicode, which would pass a naive check.
+        assert!(StateCode::new("ß").is_err());
+    }
+
     // CountryCode
 
     #[test]
@@ -456,6 +462,11 @@ mod tests {
     #[test]
     fn country_code_rejects_empty() {
         assert!(CountryCode::new("").is_err());
+    }
+
+    #[test]
+    fn country_code_rejects_non_ascii_that_uppercases_to_ascii() {
+        assert!(CountryCode::new("ß").is_err());
     }
 
     // PostalCode
