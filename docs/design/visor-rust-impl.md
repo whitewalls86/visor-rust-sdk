@@ -553,6 +553,13 @@ pub fn paginate_dealers(
     filter: DealerFilter,
     max_pages: Option<usize>,
 ) -> impl futures::stream::Stream<Item = Result<DealerSummary, VisorError>> + '_
+
+pub fn paginate_dealer_inventory(
+    client: &AsyncVisorClient,
+    dealer_id: Uuid,
+    filter: ListingsFilter,
+    max_pages: Option<usize>,
+) -> impl futures::stream::Stream<Item = Result<ListingSummary, VisorError>> + '_
 ```
 
 Returns a `Stream` of individual items. Built with `futures::stream::unfold` to paginate transparently.
@@ -571,9 +578,16 @@ pub fn iter_dealers(
     filter: DealerFilter,
     max_pages: Option<usize>,
 ) -> impl Iterator<Item = Result<DealerSummary, VisorError>> + '_
+
+pub fn iter_dealer_inventory(
+    client: &VisorClient,
+    dealer_id: Uuid,
+    filter: ListingsFilter,
+    max_pages: Option<usize>,
+) -> impl Iterator<Item = Result<ListingSummary, VisorError>> + '_
 ```
 
-All four helpers take `max_pages: Option<usize>`. `Some(0)` fetches nothing; `None` pages until exhausted. Helpers take the filter by value and own a mutable internal copy that they update (incrementing `offset`) between pages. Do not hold a reference to the caller's filter inside the stream/iterator — take ownership and mutate the internal copy only.
+All six helpers take `max_pages: Option<usize>`. `Some(0)` fetches nothing; `None` pages until exhausted. Helpers take the filter by value and own a mutable internal copy that they update (incrementing `offset`) between pages. Do not hold a reference to the caller's filter inside the stream/iterator — take ownership and mutate the internal copy only.
 
 ## Public API Surface
 
@@ -619,7 +633,7 @@ Only these are public (re-export all from `lib.rs`):
 - All enum types used in filter construction: `ListingInclude`, `SortOrder`, `InventoryStatus`, `FacetSort`, `DealerType`
 - All response model types: `ListingsPage`, `ListingSummary`, `ListingDetail`, `ListingSnapshot`, `DealersPage`, `DealerSummary`, `DealerDetail`, `DealerAddress`, `FacetsResponse`, `FacetBucket`, `RangeBucket`, `RangeFacet`, `FieldStats`, `FacetsData`, `FacetsMeta`, `VinDetail`, `UsageSummary`, `UsageRecord`, `UsageTotals`, `UsageMeta`
 - All nested types that appear in public response model fields: `VehicleBuild`, `VehicleOption`, `VehicleRecord`, `PriceHistoryEntry`, `DealerRef`, `BBox`, `Pagination`, `RangeBucket`
-- `paginate_listings`, `iter_listings`, `paginate_dealers`, `iter_dealers`
+- `paginate_listings`, `iter_listings`, `paginate_dealers`, `iter_dealers`, `paginate_dealer_inventory`, `iter_dealer_inventory`
 
 Internal (keep private via module-level visibility):
 - `AsyncVisorTransport`, `SyncVisorTransport` — not re-exported

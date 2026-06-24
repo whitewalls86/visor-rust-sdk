@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use uuid::Uuid;
+
 use crate::client::VisorClient;
 use crate::error::VisorError;
 use crate::models::dealers::{DealerFilter, DealerSummary};
@@ -125,6 +127,73 @@ pub fn iter_dealers(
 ) -> impl Iterator<Item = Result<DealerSummary, VisorError>> + '_ {
     DealersIter {
         client,
+        filter,
+        buffer: VecDeque::new(),
+        pages_fetched: 0,
+        max_pages,
+        done: false,
+    }
+}
+
+struct DealerInventoryIter<'a> {
+    client: &'a VisorClient,
+    dealer_id: Uuid,
+    filter: ListingsFilter,
+    buffer: VecDeque<ListingSummary>,
+    pages_fetched: usize,
+    max_pages: Option<usize>,
+    done: bool,
+}
+
+impl<'a> Iterator for DealerInventoryIter<'a> {
+    type Item = Result<ListingSummary, VisorError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(item) = self.buffer.pop_front() {
+            return Some(Ok(item));
+        }
+        if self.done {
+            return None;
+        }
+        if self.max_pages.is_some_and(|max| self.pages_fetched >= max) {
+            return None;
+        }
+        match self.client.dealer_inventory(self.dealer_id, &self.filter) {
+            Err(e) => {
+                self.done = true;
+                Some(Err(e))
+            }
+            Ok(page) => {
+                self.pages_fetched += 1;
+                if page.data.is_empty() {
+                    self.done = true;
+                    return None;
+                }
+                advance_offset(
+                    &mut self.done,
+                    &mut self.filter.offset,
+                    page.pagination.next_offset,
+                );
+                self.buffer = page.data.into_iter().collect();
+                self.buffer.pop_front().map(Ok)
+            }
+        }
+    }
+}
+
+/// Returns an iterator over listing summaries from a dealer's paginated inventory.
+///
+/// Fetches pages until the API is exhausted or `max_pages` pages have been
+/// fetched. `Some(0)` performs no request. `None` means no page limit.
+pub fn iter_dealer_inventory(
+    client: &VisorClient,
+    dealer_id: Uuid,
+    filter: ListingsFilter,
+    max_pages: Option<usize>,
+) -> impl Iterator<Item = Result<ListingSummary, VisorError>> + '_ {
+    DealerInventoryIter {
+        client,
+        dealer_id,
         filter,
         buffer: VecDeque::new(),
         pages_fetched: 0,
