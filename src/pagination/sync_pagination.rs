@@ -5,11 +5,7 @@ use crate::error::VisorError;
 use crate::models::dealers::{DealerFilter, DealerSummary};
 use crate::models::listings::{ListingSummary, ListingsFilter};
 
-/// Iterator over listing summaries from paginated API responses.
-///
-/// Created by [`iter_listings`]. Items are yielded in API order.
-/// On error, the error is yielded once and the iterator terminates.
-pub struct ListingsIter<'a> {
+struct ListingsIter<'a> {
     client: &'a VisorClient,
     filter: ListingsFilter,
     buffer: VecDeque<ListingSummary>,
@@ -39,6 +35,7 @@ impl<'a> Iterator for ListingsIter<'a> {
             Ok(page) => {
                 self.pages_fetched += 1;
                 if page.data.is_empty() {
+                    self.done = true;
                     return None;
                 }
                 advance_offset(
@@ -61,7 +58,7 @@ pub fn iter_listings(
     client: &VisorClient,
     filter: ListingsFilter,
     max_pages: Option<usize>,
-) -> ListingsIter<'_> {
+) -> impl Iterator<Item = Result<ListingSummary, VisorError>> + '_ {
     ListingsIter {
         client,
         filter,
@@ -72,11 +69,7 @@ pub fn iter_listings(
     }
 }
 
-/// Iterator over dealer summaries from paginated API responses.
-///
-/// Created by [`iter_dealers`]. Items are yielded in API order.
-/// On error, the error is yielded once and the iterator terminates.
-pub struct DealersIter<'a> {
+struct DealersIter<'a> {
     client: &'a VisorClient,
     filter: DealerFilter,
     buffer: VecDeque<DealerSummary>,
@@ -106,6 +99,7 @@ impl<'a> Iterator for DealersIter<'a> {
             Ok(page) => {
                 self.pages_fetched += 1;
                 if page.data.is_empty() {
+                    self.done = true;
                     return None;
                 }
                 advance_offset(
@@ -128,7 +122,7 @@ pub fn iter_dealers(
     client: &VisorClient,
     filter: DealerFilter,
     max_pages: Option<usize>,
-) -> DealersIter<'_> {
+) -> impl Iterator<Item = Result<DealerSummary, VisorError>> + '_ {
     DealersIter {
         client,
         filter,

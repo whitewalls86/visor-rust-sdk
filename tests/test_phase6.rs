@@ -739,4 +739,66 @@ mod phase6 {
         assert_eq!(items.len(), 1);
         assert!(items[0].is_err());
     }
+
+    // ── Repeated-polling after exhaustion ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn iter_listings_repeated_next_after_empty_page_makes_no_extra_request() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/listings"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "data": [],
+                "pagination": {"limit": 50, "offset": 0, "total": 0, "next_offset": null},
+                "meta": {}
+            })))
+            .mount(&server)
+            .await;
+
+        let base_url = server.uri();
+        tokio::task::spawn_blocking(move || {
+            let client = make_sync(base_url);
+            let mut iter = visor::iter_listings(&client, ListingsFilter::default(), None);
+            assert!(iter.next().is_none());
+            assert!(iter.next().is_none()); // must not trigger a second request
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(
+            server.received_requests().await.unwrap().len(),
+            1,
+            "repeated next() after empty-page exhaustion must not send extra requests"
+        );
+    }
+
+    #[tokio::test]
+    async fn iter_dealers_repeated_next_after_empty_page_makes_no_extra_request() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/dealers"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "data": [],
+                "pagination": {"limit": 50, "offset": 0, "total": 0, "next_offset": null},
+                "meta": {}
+            })))
+            .mount(&server)
+            .await;
+
+        let base_url = server.uri();
+        tokio::task::spawn_blocking(move || {
+            let client = make_sync(base_url);
+            let mut iter = visor::iter_dealers(&client, DealerFilter::default(), None);
+            assert!(iter.next().is_none());
+            assert!(iter.next().is_none()); // must not trigger a second request
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(
+            server.received_requests().await.unwrap().len(),
+            1,
+            "repeated next() after empty-page exhaustion must not send extra requests"
+        );
+    }
 }
