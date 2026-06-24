@@ -22,7 +22,7 @@ fn make_sync(base_url: String) -> VisorClient {
     })
 }
 
-// â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Fixtures ---
 
 fn listing(id: &str) -> serde_json::Value {
     json!({ "id": id, "vin": "TESTVIN00000000000" })
@@ -68,7 +68,7 @@ fn dealers_page(ids: &[&str], offset: i32, next_offset: Option<i32>) -> serde_js
     })
 }
 
-// â”€â”€ Async listings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Async listings ---
 
 #[tokio::test]
 async fn paginate_listings_multiple_pages_flattened_in_order() {
@@ -131,7 +131,7 @@ async fn paginate_listings_propagates_next_offset() {
 #[tokio::test]
 async fn paginate_listings_max_pages_zero_makes_no_request() {
     let server = MockServer::start().await;
-    // No mock mounted â€” any request would cause wiremock to error.
+    // No mock mounted -- any request would cause wiremock to error.
 
     let client = async_client(server.uri());
     let items: Vec<_> = visor::paginate_listings(&client, ListingsFilter::default(), Some(0))
@@ -277,7 +277,7 @@ async fn paginate_listings_preserves_initial_filter_offset() {
 #[tokio::test]
 async fn paginate_listings_stops_on_non_advancing_next_offset() {
     let server = MockServer::start().await;
-    // next_offset equals current offset â€” non-advancing, must not loop.
+    // next_offset equals current offset -- non-advancing, must not loop.
     Mock::given(method("GET"))
         .and(path("/listings"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
@@ -302,7 +302,7 @@ async fn paginate_listings_stops_on_non_advancing_next_offset() {
     );
 }
 
-// â”€â”€ Async dealers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Async dealers ---
 
 #[tokio::test]
 async fn paginate_dealers_multiple_pages_flattened_in_order() {
@@ -392,7 +392,7 @@ async fn paginate_dealers_stops_on_non_advancing_next_offset() {
     assert_eq!(server.received_requests().await.unwrap().len(), 1);
 }
 
-// â”€â”€ Sync listings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Sync listings ---
 
 #[tokio::test]
 async fn iter_listings_multiple_pages_flattened_in_order() {
@@ -632,7 +632,7 @@ async fn iter_listings_stops_on_non_advancing_next_offset() {
     );
 }
 
-// â”€â”€ Sync dealers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Sync dealers ---
 
 #[tokio::test]
 async fn iter_dealers_multiple_pages_flattened_in_order() {
@@ -708,7 +708,7 @@ async fn iter_dealers_error_propagated_and_iterator_terminates() {
     assert!(items[0].is_err());
 }
 
-// â”€â”€ Repeated-polling after exhaustion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Repeated-polling after exhaustion ---
 
 #[tokio::test]
 async fn iter_listings_repeated_next_after_empty_page_makes_no_extra_request() {

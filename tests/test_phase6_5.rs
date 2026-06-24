@@ -49,7 +49,7 @@ fn listings_page(ids: &[&str], offset: i32, next_offset: Option<i32>) -> serde_j
     })
 }
 
-// â”€â”€ Async dealer inventory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Async dealer inventory ---
 
 #[tokio::test]
 async fn paginate_dealer_inventory_hits_correct_path() {
@@ -347,7 +347,7 @@ async fn paginate_dealer_inventory_error_propagated_and_stream_terminates() {
     );
 }
 
-// â”€â”€ Sync dealer inventory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Sync dealer inventory ---
 
 #[tokio::test]
 async fn iter_dealer_inventory_hits_correct_path() {
