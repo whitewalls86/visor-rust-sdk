@@ -357,6 +357,87 @@ async fn sync_get_listing_sends_include_query_param() {
     // MockServer verifies expect(1) on drop
 }
 
+// ── get_listing: path-segment validation ─────────────────────────────────────
+//
+// reqwest::Url follows the WHATWG URL Standard which normalizes "." and ".."
+// path segments (and their %2E equivalents) into directory traversal regardless
+// of encoding. get_listing validates and rejects these IDs before the transport
+// is contacted, returning InvalidFilter. Slashes inside an ID are encoded as %2F.
+
+#[tokio::test]
+async fn get_listing_double_dot_id_is_invalid_filter() {
+    // Port 1 is unreachable: a TransportError would occur if any HTTP request were sent.
+    let client = AsyncVisorClient::with_config(ClientConfig {
+        api_key: "test-key".to_string(),
+        base_url: "http://127.0.0.1:1".to_string(),
+        ..ClientConfig::default()
+    });
+    let err = client.get_listing("..", None).await.unwrap_err();
+    assert!(
+        matches!(err, VisorError::InvalidFilter { .. }),
+        "double-dot ID must be rejected before any HTTP request; got: {err:?}"
+    );
+}
+
+#[tokio::test]
+async fn get_listing_single_dot_id_is_invalid_filter() {
+    let client = AsyncVisorClient::with_config(ClientConfig {
+        api_key: "test-key".to_string(),
+        base_url: "http://127.0.0.1:1".to_string(),
+        ..ClientConfig::default()
+    });
+    let err = client.get_listing(".", None).await.unwrap_err();
+    assert!(
+        matches!(err, VisorError::InvalidFilter { .. }),
+        "single-dot ID must be rejected before any HTTP request; got: {err:?}"
+    );
+}
+
+#[tokio::test]
+async fn sync_get_listing_double_dot_id_is_invalid_filter() {
+    let server_uri = "http://127.0.0.1:1".to_string();
+    let err = tokio::task::spawn_blocking(move || {
+        sync_client(server_uri).get_listing("..", None).unwrap_err()
+    })
+    .await
+    .unwrap();
+    assert!(
+        matches!(err, VisorError::InvalidFilter { .. }),
+        "double-dot ID must be rejected before any HTTP request; got: {err:?}"
+    );
+}
+
+#[tokio::test]
+async fn sync_get_listing_single_dot_id_is_invalid_filter() {
+    let server_uri = "http://127.0.0.1:1".to_string();
+    let err = tokio::task::spawn_blocking(move || {
+        sync_client(server_uri).get_listing(".", None).unwrap_err()
+    })
+    .await
+    .unwrap();
+    assert!(
+        matches!(err, VisorError::InvalidFilter { .. }),
+        "single-dot ID must be rejected before any HTTP request; got: {err:?}"
+    );
+}
+
+#[tokio::test]
+async fn get_listing_slash_in_id_is_encoded() {
+    let server = MockServer::start().await;
+    // A slash in a segment must be encoded as %2F, not treated as a path separator.
+    Mock::given(method("GET"))
+        .and(path("/listings/a%2Fb"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(listing_detail_body()))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    async_client(server.uri())
+        .get_listing("a/b", None)
+        .await
+        .expect("slash in listing id should be percent-encoded");
+}
+
 // ── Malformed error body → fallback to unknown_error ─────────────────────────
 
 #[tokio::test]

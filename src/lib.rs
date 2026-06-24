@@ -17,5 +17,5 @@ pub use models::{
     ListingSummary, ListingsFilter, ListingsFilterBase, ListingsPage, Longitude, Pagination,
     PostalCode, PriceHistoryEntry, RadiusMiles, RangeBucket, RangeFacet, SortOrder, StateCode,
     UsageMeta, UsageRecord, UsageSummary, UsageTotals, VehicleBuild, VehicleOption, VehicleRecord,
-    VinDetail, VinPattern,
+    Vin, VinDetail, VinPattern,
 };

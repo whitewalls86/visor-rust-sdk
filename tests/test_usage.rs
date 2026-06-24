@@ -73,8 +73,8 @@ async fn get_usage_start_and_end_sent_as_iso8601() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/usage"))
-        .and(query_param("start", "2024-01-01"))
-        .and(query_param("end", "2024-01-31"))
+        .and(query_param("start_date", "2024-01-01"))
+        .and(query_param("end_date", "2024-01-31"))
         .respond_with(ResponseTemplate::new(200).set_body_json(usage_body()))
         .mount(&server)
         .await;

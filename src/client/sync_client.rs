@@ -1,14 +1,15 @@
 use chrono::NaiveDate;
+use uuid::Uuid;
 
-use crate::client::ClientConfig;
+use crate::client::{build_include_params, build_usage_params, validate_listing_id, ClientConfig};
 use crate::error::VisorError;
 use crate::models::base::ListingInclude;
 use crate::models::dealers::{DealerDetail, DealerFilter, DealersPage};
 use crate::models::facets::{FacetsFilter, FacetsResponse};
 use crate::models::listings::{ListingDetail, ListingsFilter, ListingsPage};
 use crate::models::usage::UsageSummary;
-use crate::models::vins::VinDetail;
-use crate::transport::SyncVisorTransport;
+use crate::models::vins::{Vin, VinDetail};
+use crate::transport::{encode_path_segment, SyncVisorTransport};
 
 /// Sync client for the Visor Public API.
 #[derive(Debug)]
@@ -43,7 +44,7 @@ impl VisorClient {
         }
     }
 
-    // ── Implemented methods ───────────────────────────────────────────────────
+    // ── Listing methods ───────────────────────────────────────────────────────
 
     pub fn filter_listings(&self, filter: &ListingsFilter) -> Result<ListingsPage, VisorError> {
         filter.validate()?;
@@ -55,64 +56,67 @@ impl VisorClient {
         id: &str,
         include: Option<Vec<ListingInclude>>,
     ) -> Result<ListingDetail, VisorError> {
-        let mut params = Vec::new();
-        if let Some(includes) = include {
-            if !includes.is_empty() {
-                let s: Vec<&str> = includes.iter().map(|i| i.as_str()).collect();
-                params.push(("include".to_string(), s.join(",")));
-            }
-        }
-        self.transport.get_one(&format!("/listings/{id}"), params)
+        validate_listing_id(id)?;
+        let params = build_include_params(include);
+        self.transport
+            .get_one(&format!("/listings/{}", encode_path_segment(id)), params)
     }
 
-    // ── Stub methods — Phase 5 TODO ───────────────────────────────────────────
+    // ── VIN method ────────────────────────────────────────────────────────────
 
     pub fn lookup_vin(
         &self,
-        _vin: &str,
-        _include: Option<Vec<ListingInclude>>,
+        vin: &Vin,
+        include: Option<Vec<ListingInclude>>,
     ) -> Result<VinDetail, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+        let params = build_include_params(include);
+        self.transport
+            .get_one(&format!("/vins/{}", vin.as_str()), params)
     }
 
-    pub fn filter_facets(&self, _filter: &FacetsFilter) -> Result<FacetsResponse, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+    // ── Facets method ─────────────────────────────────────────────────────────
+
+    pub fn filter_facets(&self, filter: &FacetsFilter) -> Result<FacetsResponse, VisorError> {
+        filter.validate()?;
+        self.transport.get("/facets", filter.to_params())
     }
 
-    pub fn search_dealers(&self, _filter: &DealerFilter) -> Result<DealersPage, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+    // ── Dealer methods ────────────────────────────────────────────────────────
+
+    pub fn search_dealers(&self, filter: &DealerFilter) -> Result<DealersPage, VisorError> {
+        filter.validate()?;
+        self.transport.get("/dealers", filter.to_params())
     }
 
-    pub fn get_dealer(&self, _id: &str) -> Result<DealerDetail, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+    pub fn get_dealer(&self, id: Uuid) -> Result<DealerDetail, VisorError> {
+        self.transport.get_one(
+            &format!("/dealers/{}", encode_path_segment(&id.to_string())),
+            vec![],
+        )
     }
 
     pub fn dealer_inventory(
         &self,
-        _dealer_id: &str,
-        _filter: &ListingsFilter,
+        dealer_id: Uuid,
+        filter: &ListingsFilter,
     ) -> Result<ListingsPage, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+        filter.validate()?;
+        let path = format!(
+            "/dealers/{}/listings",
+            encode_path_segment(&dealer_id.to_string())
+        );
+        self.transport.get(&path, filter.to_params())
     }
+
+    // ── Usage method ──────────────────────────────────────────────────────────
 
     pub fn get_usage(
         &self,
-        _start: Option<NaiveDate>,
-        _end: Option<NaiveDate>,
-        _metering_class: Option<Vec<String>>,
+        start: Option<NaiveDate>,
+        end: Option<NaiveDate>,
+        metering_class: Option<Vec<String>>,
     ) -> Result<UsageSummary, VisorError> {
-        Err(VisorError::InvalidResponse {
-            message: "not implemented".to_string(),
-        })
+        let params = build_usage_params(start, end, metering_class)?;
+        self.transport.get("/usage", params)
     }
 }
