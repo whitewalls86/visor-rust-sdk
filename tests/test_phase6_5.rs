@@ -197,6 +197,43 @@ mod phase6_5 {
     }
 
     #[tokio::test]
+    async fn paginate_dealer_inventory_preserves_non_offset_filter_fields_across_pages() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path(dealer_inventory_path()))
+            .and(query_param("offset", "0"))
+            .and(query_param("make", "Ford"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(listings_page(
+                &["a"],
+                0,
+                Some(1),
+            )))
+            .expect(1)
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path(dealer_inventory_path()))
+            .and(query_param("offset", "1"))
+            .and(query_param("make", "Ford"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(listings_page(&["b"], 1, None)))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let mut filter = ListingsFilter::default();
+        filter.base.make = Some(vec!["Ford".to_string()]);
+
+        let client = async_client(server.uri());
+        let items: Vec<_> = visor::paginate_dealer_inventory(&client, dealer_uuid(), filter, None)
+            .collect()
+            .await;
+
+        let ids: Vec<_> = items.into_iter().map(|r| r.unwrap().id).collect();
+        assert_eq!(ids, vec!["a", "b"]);
+        // wiremock expect(1) on both mocks verifies make=Ford was sent on every page
+    }
+
+    #[tokio::test]
     async fn paginate_dealer_inventory_max_pages_zero_makes_no_request() {
         let server = MockServer::start().await;
 
