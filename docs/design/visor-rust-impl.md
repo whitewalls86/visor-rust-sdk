@@ -619,7 +619,7 @@ Only these are public (re-export all from `lib.rs`):
 - All enum types used in filter construction: `ListingInclude`, `SortOrder`, `InventoryStatus`, `FacetSort`, `DealerType`
 - All response model types: `ListingsPage`, `ListingSummary`, `ListingDetail`, `ListingSnapshot`, `DealersPage`, `DealerSummary`, `DealerDetail`, `DealerAddress`, `FacetsResponse`, `FacetBucket`, `RangeBucket`, `RangeFacet`, `FieldStats`, `FacetsData`, `FacetsMeta`, `VinDetail`, `UsageSummary`, `UsageRecord`, `UsageTotals`, `UsageMeta`
 - All nested types that appear in public response model fields: `VehicleBuild`, `VehicleOption`, `VehicleRecord`, `PriceHistoryEntry`, `DealerRef`, `BBox`, `Pagination`, `RangeBucket`
-- `paginate_listings`, `iter_listings`, `paginate_dealers`, `iter_dealers`
+- `paginate_listings`, `iter_listings`, `paginate_dealers`, `iter_dealers`, `paginate_dealer_inventory`, `iter_dealer_inventory`
 
 Internal (keep private via module-level visibility):
 - `AsyncVisorTransport`, `SyncVisorTransport` — not re-exported
