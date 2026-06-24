@@ -33,8 +33,8 @@ impl Default for ClientConfig {
 ///
 /// `reqwest::Url` follows the WHATWG URL Standard, which normalizes `"."` and `".."` — and
 /// their percent-encoded equivalents — into directory traversal regardless of how they are
-/// encoded. Real listing IDs from this API are opaque hex strings, so rejecting these values
-/// early produces a clear error instead of silently requesting the wrong endpoint.
+/// encoded. Rejecting these values early produces a clear error instead of silently
+/// requesting the wrong endpoint.
 pub(crate) fn validate_listing_id(id: &str) -> Result<(), VisorError> {
     if id == "." || id == ".." {
         return Err(VisorError::InvalidFilter {

@@ -394,6 +394,34 @@ async fn get_listing_single_dot_id_is_invalid_filter() {
 }
 
 #[tokio::test]
+async fn sync_get_listing_double_dot_id_is_invalid_filter() {
+    let server_uri = "http://127.0.0.1:1".to_string();
+    let err = tokio::task::spawn_blocking(move || {
+        sync_client(server_uri).get_listing("..", None).unwrap_err()
+    })
+    .await
+    .unwrap();
+    assert!(
+        matches!(err, VisorError::InvalidFilter { .. }),
+        "double-dot ID must be rejected before any HTTP request; got: {err:?}"
+    );
+}
+
+#[tokio::test]
+async fn sync_get_listing_single_dot_id_is_invalid_filter() {
+    let server_uri = "http://127.0.0.1:1".to_string();
+    let err = tokio::task::spawn_blocking(move || {
+        sync_client(server_uri).get_listing(".", None).unwrap_err()
+    })
+    .await
+    .unwrap();
+    assert!(
+        matches!(err, VisorError::InvalidFilter { .. }),
+        "single-dot ID must be rejected before any HTTP request; got: {err:?}"
+    );
+}
+
+#[tokio::test]
 async fn get_listing_slash_in_id_is_encoded() {
     let server = MockServer::start().await;
     // A slash in a segment must be encoded as %2F, not treated as a path separator.
