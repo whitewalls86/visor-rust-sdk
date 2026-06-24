@@ -9,6 +9,11 @@ use std::time::Duration;
 use crate::error::{ApiErrorBody, VisorError};
 
 /// Percent-encode a single URL path segment (RFC 3986 unreserved chars pass through unchanged).
+///
+/// Dots are unreserved chars and pass through unencoded. Callers must ensure that dot-only
+/// segments (`"."` or `".."`) are never supplied: `reqwest::Url` follows the WHATWG URL
+/// Standard which normalizes them into directory traversal regardless of percent-encoding.
+/// `get_listing` validates and rejects such IDs before this function is reached.
 pub(crate) fn encode_path_segment(s: &str) -> String {
     s.bytes()
         .fold(String::with_capacity(s.len()), |mut acc, b| {
@@ -19,6 +24,41 @@ pub(crate) fn encode_path_segment(s: &str) -> String {
             }
             acc
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::encode_path_segment;
+
+    #[test]
+    fn plain_alphanumeric_passes_through() {
+        assert_eq!(encode_path_segment("abc123"), "abc123");
+    }
+
+    #[test]
+    fn dot_in_middle_of_segment_passes_through() {
+        assert_eq!(encode_path_segment("abc.def"), "abc.def");
+    }
+
+    #[test]
+    fn single_dot_passes_through_as_unreserved_char() {
+        assert_eq!(encode_path_segment("."), ".");
+    }
+
+    #[test]
+    fn double_dot_passes_through_as_unreserved_chars() {
+        assert_eq!(encode_path_segment(".."), "..");
+    }
+
+    #[test]
+    fn slash_is_encoded() {
+        assert_eq!(encode_path_segment("a/b"), "a%2Fb");
+    }
+
+    #[test]
+    fn unreserved_chars_pass_through() {
+        assert_eq!(encode_path_segment("a-b_c~d"), "a-b_c~d");
+    }
 }
 
 fn build_url_with_params(base_url: &str, path: &str, params: &[(String, String)]) -> reqwest::Url {

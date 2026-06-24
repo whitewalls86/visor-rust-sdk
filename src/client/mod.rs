@@ -29,6 +29,24 @@ impl Default for ClientConfig {
     }
 }
 
+/// Reject listing IDs that are dot-only path segments.
+///
+/// `reqwest::Url` follows the WHATWG URL Standard, which normalizes `"."` and `".."` — and
+/// their percent-encoded equivalents — into directory traversal regardless of how they are
+/// encoded. Real listing IDs from this API are opaque hex strings, so rejecting these values
+/// early produces a clear error instead of silently requesting the wrong endpoint.
+pub(crate) fn validate_listing_id(id: &str) -> Result<(), VisorError> {
+    if id == "." || id == ".." {
+        return Err(VisorError::InvalidFilter {
+            message: format!(
+                "listing ID {id:?} is not a valid identifier; \
+                 dot-only path segments are normalized by the URL parser"
+            ),
+        });
+    }
+    Ok(())
+}
+
 pub(crate) fn build_include_params(include: Option<Vec<ListingInclude>>) -> Vec<(String, String)> {
     let mut params = Vec::new();
     if let Some(includes) = include {

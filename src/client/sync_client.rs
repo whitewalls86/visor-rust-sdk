@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use uuid::Uuid;
 
-use crate::client::{build_include_params, build_usage_params, ClientConfig};
+use crate::client::{build_include_params, build_usage_params, validate_listing_id, ClientConfig};
 use crate::error::VisorError;
 use crate::models::base::ListingInclude;
 use crate::models::dealers::{DealerDetail, DealerFilter, DealersPage};
@@ -56,6 +56,7 @@ impl VisorClient {
         id: &str,
         include: Option<Vec<ListingInclude>>,
     ) -> Result<ListingDetail, VisorError> {
+        validate_listing_id(id)?;
         let params = build_include_params(include);
         self.transport
             .get_one(&format!("/listings/{}", encode_path_segment(id)), params)
