@@ -1,12 +1,8 @@
 use visor::{AsyncVisorClient, ClientConfig, VisorClient, VisorError};
 
-#[cfg(phase_contracts)]
 use serde_json::json;
-#[cfg(phase_contracts)]
 use visor::ListingsFilter;
-#[cfg(phase_contracts)]
 use wiremock::matchers::{method, path};
-#[cfg(phase_contracts)]
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // Serialize all tests that mutate VISOR_API_KEY so they can't race.
@@ -66,7 +62,6 @@ fn client_config_default_timeout_is_30_seconds() {
 //   base_url.trim_end_matches('/') + "/" + path.trim_start_matches('/')
 // Not Url::join — that drops path segments (e.g. /v1 would be lost in production).
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn base_url_with_trailing_slash_still_hits_correct_path() {
     let server = MockServer::start().await;
@@ -94,7 +89,6 @@ async fn base_url_with_trailing_slash_still_hits_correct_path() {
     // MockServer verifies expect(1) was satisfied on drop.
 }
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn base_url_without_trailing_slash_also_composes_correctly() {
     let server = MockServer::start().await;

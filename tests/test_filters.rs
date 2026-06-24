@@ -6,10 +6,8 @@ use visor::{
     VisorError,
 };
 
-#[cfg(phase_contracts)]
 use uuid::Uuid;
 
-#[cfg(phase_contracts)]
 use visor::{
     AvailabilityStatus, CountryCode, DealerFilter, DealerType, GeoFilter, GeoOrigin,
     HistoryKeyword, InventoryType, ListingField, ListingInclude, PostalCode, RadiusMiles,
@@ -20,7 +18,6 @@ fn has_key(params: &[(String, String)], key: &str) -> bool {
     params.iter().any(|(k, _)| k == key)
 }
 
-#[cfg(phase_contracts)]
 fn param(params: &[(String, String)], key: &str) -> Option<String> {
     params
         .iter()
@@ -90,7 +87,6 @@ fn bbox_new_antimeridian_crossing_accepted() {
 
 // ── Serialization golden tests ────────────────────────────────────────────────
 
-#[cfg(phase_contracts)]
 #[test]
 fn default_listings_filter_emits_limit_offset_sort() {
     let params = ListingsFilter::default().to_params();
@@ -111,7 +107,6 @@ fn inventory_mode_active_omitted_from_params() {
     assert!(!has_key(&filter.to_params(), "inventory_status"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn inventory_mode_sold_emitted_as_wire_value() {
     let filter = ListingsFilter {
@@ -128,7 +123,6 @@ fn inventory_mode_sold_emitted_as_wire_value() {
     assert_eq!(param(&params, "sold_within_days").as_deref(), Some("30"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn inventory_mode_sold_without_window_emits_sold_but_no_days() {
     let filter = ListingsFilter {
@@ -145,7 +139,6 @@ fn inventory_mode_sold_without_window_emits_sold_but_no_days() {
     assert!(!has_key(&params, "sold_within_days"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn assembly_location_uses_pipe_separator() {
     let filter = ListingsFilter {
@@ -161,7 +154,6 @@ fn assembly_location_uses_pipe_separator() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn exclude_assembly_location_uses_plus_separator() {
     let filter = ListingsFilter {
@@ -177,7 +169,6 @@ fn exclude_assembly_location_uses_plus_separator() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn bbox_serialized_as_west_south_east_north() {
     let bbox = BBox::new(
@@ -200,7 +191,6 @@ fn bbox_serialized_as_west_south_east_north() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn antimeridian_bbox_serialized_correctly() {
     let bbox = BBox::new(
@@ -223,7 +213,6 @@ fn antimeridian_bbox_serialized_correctly() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn geo_origin_postal_code_emitted_as_postal_code_param() {
     let filter = ListingsFilter {
@@ -241,7 +230,6 @@ fn geo_origin_postal_code_emitted_as_postal_code_param() {
     assert!(!has_key(&params, "longitude"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn geo_origin_coordinates_emitted_as_lat_lon() {
     let filter = ListingsFilter {
@@ -260,7 +248,6 @@ fn geo_origin_coordinates_emitted_as_lat_lon() {
     assert!(!has_key(&params, "postal_code"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn geo_radius_with_postal_origin_emits_radius_and_postal_code() {
     let filter = ListingsFilter {
@@ -280,7 +267,6 @@ fn geo_radius_with_postal_origin_emits_radius_and_postal_code() {
     assert!(!has_key(&params, "bbox"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn geo_radius_with_coordinates_emits_radius_lat_lon() {
     let filter = ListingsFilter {
@@ -303,7 +289,6 @@ fn geo_radius_with_coordinates_emits_radius_lat_lon() {
     assert!(!has_key(&params, "bbox"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn sort_wire_values_match_python_sdk() {
     let cases = [
@@ -333,7 +318,6 @@ fn sort_wire_values_match_python_sdk() {
     }
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn fields_projection_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -350,7 +334,6 @@ fn fields_projection_emitted_comma_separated() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn include_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -363,7 +346,6 @@ fn include_emitted_comma_separated() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn snapshot_date_serialized_as_iso8601() {
     use chrono::NaiveDate;
@@ -382,7 +364,6 @@ fn snapshot_date_serialized_as_iso8601() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn comma_separated_list_fields_join_correctly() {
     let filter = ListingsFilter {
@@ -401,7 +382,6 @@ fn comma_separated_list_fields_join_correctly() {
     assert_eq!(param(&params, "state").as_deref(), Some("CA,TX"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn vehicle_string_list_fields_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -435,7 +415,6 @@ fn vehicle_string_list_fields_emitted_comma_separated() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn inventory_type_wire_values_emitted() {
     let filter = ListingsFilter {
@@ -451,7 +430,6 @@ fn inventory_type_wire_values_emitted() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn history_keywords_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -467,7 +445,6 @@ fn history_keywords_emitted_comma_separated() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn numeric_range_params_emitted() {
     let filter = ListingsFilter {
@@ -495,7 +472,6 @@ fn numeric_range_params_emitted() {
     assert_eq!(param(&params, "max_days_on_market").as_deref(), Some("90"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn vin_pattern_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -514,7 +490,6 @@ fn vin_pattern_emitted_comma_separated() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_id_serialized_as_hyphenated_uuid() {
     let id = Uuid::from_u128(0x12345678_1234_1234_1234_123456789abc);
@@ -533,7 +508,6 @@ fn dealer_id_serialized_as_hyphenated_uuid() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn availability_status_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -549,7 +523,6 @@ fn availability_status_emitted_comma_separated() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn empty_vec_is_omitted_from_params() {
     let filter = ListingsFilter {
@@ -565,7 +538,6 @@ fn empty_vec_is_omitted_from_params() {
     assert!(!has_key(&params, "model"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn year_emitted_as_comma_separated_integers() {
     let filter = ListingsFilter {
@@ -581,7 +553,6 @@ fn year_emitted_as_comma_separated_integers() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn seating_capacity_and_doors_emitted() {
     let filter = ListingsFilter {
@@ -599,7 +570,6 @@ fn seating_capacity_and_doors_emitted() {
     assert_eq!(param(&params, "doors").as_deref(), Some("2,4"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_type_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -615,7 +585,6 @@ fn dealer_type_emitted_comma_separated() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn exclusion_filters_emitted_with_correct_separators() {
     let filter = ListingsFilter {
@@ -650,7 +619,6 @@ fn exclusion_filters_emitted_with_correct_separators() {
     assert_eq!(param(&params, "exclude_keywords").as_deref(), Some("fleet"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn additional_exclusion_filters_emitted_comma_separated() {
     let filter = ListingsFilter {
@@ -695,7 +663,6 @@ fn additional_exclusion_filters_emitted_comma_separated() {
 
 // ── FacetsFilter serialization ────────────────────────────────────────────────
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_always_emits_sort() {
     let filter = FacetsFilter::new(vec![FacetField::Make]);
@@ -707,7 +674,6 @@ fn facets_filter_always_emits_sort() {
     assert_eq!(param(&params, "sort").as_deref(), Some("-count"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_always_emits_facets() {
     let filter = FacetsFilter::new(vec![FacetField::Make, FacetField::Model]);
@@ -715,14 +681,12 @@ fn facets_filter_always_emits_facets() {
     assert_eq!(param(&params, "facets").as_deref(), Some("make,model"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_omits_metric_when_none() {
     let filter = FacetsFilter::new(vec![FacetField::Make]);
     assert!(!has_key(&filter.to_params(), "metric"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_emits_metric_count() {
     let mut filter = FacetsFilter::new(vec![FacetField::Make]);
@@ -733,7 +697,6 @@ fn facets_filter_emits_metric_count() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_emits_aggregate_metric() {
     let mut filter = FacetsFilter::new(vec![FacetField::Make]);
@@ -747,14 +710,12 @@ fn facets_filter_emits_aggregate_metric() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_omits_facet_value_limit_when_none() {
     let filter = FacetsFilter::new(vec![FacetField::Make]);
     assert!(!has_key(&filter.to_params(), "facet_value_limit"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_emits_facet_value_limit_when_set() {
     let mut filter = FacetsFilter::new(vec![FacetField::Make]);
@@ -765,7 +726,6 @@ fn facets_filter_emits_facet_value_limit_when_set() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facet_sort_wire_values() {
     let cases = [
@@ -785,7 +745,6 @@ fn facet_sort_wire_values() {
     }
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_composes_with_base_params() {
     let mut filter = FacetsFilter::new(vec![FacetField::Make]);
@@ -799,7 +758,6 @@ fn facets_filter_composes_with_base_params() {
     assert_eq!(param(&params, "min_price").as_deref(), Some("20000"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_empty_base_vecs_are_omitted() {
     let mut filter = FacetsFilter::new(vec![FacetField::Make]);
@@ -810,7 +768,6 @@ fn facets_filter_empty_base_vecs_are_omitted() {
 
 // ── DealerFilter serialization ────────────────────────────────────────────────
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_type_field_uses_wire_key_type() {
     let filter = DealerFilter {
@@ -825,7 +782,6 @@ fn dealer_filter_type_field_uses_wire_key_type() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_independent_wire_value() {
     let filter = DealerFilter {
@@ -838,7 +794,6 @@ fn dealer_filter_independent_wire_value() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_default_emits_limit_and_offset() {
     let params = DealerFilter::default().to_params();
@@ -846,7 +801,6 @@ fn dealer_filter_default_emits_limit_and_offset() {
     assert_eq!(param(&params, "offset").as_deref(), Some("0"));
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_state_emitted_comma_separated() {
     let filter = DealerFilter {
@@ -862,7 +816,6 @@ fn dealer_filter_state_emitted_comma_separated() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_make_emitted_comma_separated() {
     let filter = DealerFilter {
@@ -875,7 +828,6 @@ fn dealer_filter_make_emitted_comma_separated() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_q_emitted() {
     let filter = DealerFilter {
@@ -888,7 +840,6 @@ fn dealer_filter_q_emitted() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_dealer_id_serialized_as_hyphenated_uuid() {
     let id = Uuid::from_u128(0x12345678_1234_1234_1234_123456789abc);
@@ -917,7 +868,6 @@ fn dealer_filter_dealer_id_serialized_as_hyphenated_uuid() {
 //   - sold_within_days + snapshot_date together (impossible across two variants)
 // These invariants are now compile-time guarantees, not runtime checks.
 
-#[cfg(phase_contracts)]
 fn assert_invalid_filter(result: Result<(), VisorError>) {
     assert!(
         matches!(result, Err(VisorError::InvalidFilter { .. })),
@@ -925,7 +875,6 @@ fn assert_invalid_filter(result: Result<(), VisorError>) {
     );
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_limit_over_100_is_invalid() {
     let filter = ListingsFilter {
@@ -935,7 +884,6 @@ fn listings_limit_over_100_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_limit_100_is_valid() {
     let filter = ListingsFilter {
@@ -945,7 +893,6 @@ fn listings_limit_100_is_valid() {
     assert!(filter.validate().is_ok());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_base_dealer_id_over_50_is_invalid() {
     let ids: Vec<Uuid> = (0u128..51).map(Uuid::from_u128).collect();
@@ -959,7 +906,6 @@ fn listings_base_dealer_id_over_50_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_base_vin_pattern_over_10_is_invalid() {
     let patterns = (0..11)
@@ -975,7 +921,6 @@ fn listings_base_vin_pattern_over_10_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_numeric_range_min_greater_than_max_is_invalid() {
     let filter = ListingsFilter {
@@ -989,7 +934,6 @@ fn listings_numeric_range_min_greater_than_max_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_mileage_range_validated() {
     let filter = ListingsFilter {
@@ -1003,7 +947,6 @@ fn listings_mileage_range_validated() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_inverted_msrp_range_is_invalid() {
     let filter = ListingsFilter {
@@ -1017,7 +960,6 @@ fn listings_inverted_msrp_range_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_inverted_days_on_market_range_is_invalid() {
     let filter = ListingsFilter {
@@ -1031,7 +973,6 @@ fn listings_inverted_days_on_market_range_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_seating_capacity_zero_is_invalid() {
     let filter = ListingsFilter {
@@ -1044,7 +985,6 @@ fn listings_seating_capacity_zero_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_doors_zero_is_invalid() {
     let filter = ListingsFilter {
@@ -1057,7 +997,6 @@ fn listings_doors_zero_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_cylinders_zero_is_valid() {
     let filter = ListingsFilter {
@@ -1070,7 +1009,6 @@ fn listings_cylinders_zero_is_valid() {
     assert!(filter.validate().is_ok());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_sold_within_days_zero_is_invalid() {
     let filter = ListingsFilter {
@@ -1085,7 +1023,6 @@ fn listings_sold_within_days_zero_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_blank_make_element_is_invalid() {
     let filter = ListingsFilter {
@@ -1098,7 +1035,6 @@ fn listings_blank_make_element_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_empty_make_element_is_invalid() {
     let filter = ListingsFilter {
@@ -1111,7 +1047,6 @@ fn listings_empty_make_element_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_sort_distance_without_geo_origin_is_invalid() {
     let filter = ListingsFilter {
@@ -1121,7 +1056,6 @@ fn listings_sort_distance_without_geo_origin_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_sort_distance_with_bbox_is_invalid() {
     let bbox = BBox::new(
@@ -1142,7 +1076,6 @@ fn listings_sort_distance_with_bbox_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn listings_sort_distance_with_origin_is_valid() {
     let filter = ListingsFilter {
@@ -1158,13 +1091,11 @@ fn listings_sort_distance_with_origin_is_valid() {
     assert!(filter.validate().is_ok());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_filter_empty_facets_is_invalid() {
     assert_invalid_filter(FacetsFilter::new(vec![]).validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn facets_base_validation_propagated() {
     let mut filter = FacetsFilter::new(vec![FacetField::Make]);
@@ -1173,7 +1104,6 @@ fn facets_base_validation_propagated() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_over_100_ids_is_invalid() {
     // dealer_id takes Vec<Uuid>; generate 101 deterministic nil-variant UUIDs.
@@ -1186,7 +1116,6 @@ fn dealer_filter_over_100_ids_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_limit_over_100_is_invalid() {
     let filter = DealerFilter {
@@ -1196,7 +1125,6 @@ fn dealer_filter_limit_over_100_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_blank_make_element_is_invalid() {
     let filter = DealerFilter {
@@ -1206,7 +1134,6 @@ fn dealer_filter_blank_make_element_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_empty_make_element_is_invalid() {
     let filter = DealerFilter {
@@ -1216,7 +1143,6 @@ fn dealer_filter_empty_make_element_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_blank_q_is_invalid() {
     let filter = DealerFilter {
@@ -1226,7 +1152,6 @@ fn dealer_filter_blank_q_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_empty_q_is_invalid() {
     let filter = DealerFilter {
@@ -1236,7 +1161,6 @@ fn dealer_filter_empty_q_is_invalid() {
     assert_invalid_filter(filter.validate());
 }
 
-#[cfg(phase_contracts)]
 #[test]
 fn dealer_filter_country_emitted() {
     let filter = DealerFilter {

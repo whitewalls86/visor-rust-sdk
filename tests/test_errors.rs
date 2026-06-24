@@ -13,7 +13,6 @@ fn make_client(base_url: String) -> AsyncVisorClient {
 
 // ── Error dispatch (HTTP status → VisorError variant) ────────────────────────
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn http_400_becomes_validation_error() {
     let server = MockServer::start().await;
@@ -35,7 +34,6 @@ async fn http_400_becomes_validation_error() {
     );
 }
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn http_401_becomes_auth_error() {
     let server = MockServer::start().await;
@@ -54,7 +52,6 @@ async fn http_401_becomes_auth_error() {
     assert!(matches!(err, VisorError::AuthError(_)), "got: {err:?}");
 }
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn http_403_becomes_forbidden_error() {
     let server = MockServer::start().await;
@@ -73,7 +70,6 @@ async fn http_403_becomes_forbidden_error() {
     assert!(matches!(err, VisorError::ForbiddenError(_)), "got: {err:?}");
 }
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn http_404_becomes_not_found_error() {
     let server = MockServer::start().await;
@@ -92,7 +88,6 @@ async fn http_404_becomes_not_found_error() {
     assert!(matches!(err, VisorError::NotFoundError(_)), "got: {err:?}");
 }
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn http_429_with_integer_retry_after_parses_duration() {
     let server = MockServer::start().await;
@@ -120,7 +115,6 @@ async fn http_429_with_integer_retry_after_parses_duration() {
     }
 }
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn http_429_with_http_date_retry_after_parses_duration() {
     let server = MockServer::start().await;
@@ -153,7 +147,6 @@ async fn http_429_with_http_date_retry_after_parses_duration() {
     }
 }
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn http_429_without_retry_after_header_yields_none() {
     let server = MockServer::start().await;
@@ -177,7 +170,6 @@ async fn http_429_without_retry_after_header_yields_none() {
     }
 }
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn http_5xx_becomes_visor_api_error() {
     let server = MockServer::start().await;
@@ -198,7 +190,6 @@ async fn http_5xx_becomes_visor_api_error() {
 
 // ── Malformed error body fallback ─────────────────────────────────────────────
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn non_json_error_body_falls_back_to_unknown_error_with_raw_text() {
     let server = MockServer::start().await;
@@ -221,7 +212,6 @@ async fn non_json_error_body_falls_back_to_unknown_error_with_raw_text() {
     }
 }
 
-#[cfg(phase_contracts)]
 #[tokio::test]
 async fn json_without_error_key_falls_back_to_unknown_error() {
     let server = MockServer::start().await;
