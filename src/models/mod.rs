@@ -25,4 +25,4 @@ pub use filter_types::{
 };
 pub use listings::{ListingDetail, ListingSnapshot, ListingSummary, ListingsFilter, ListingsPage};
 pub use usage::{UsageMeta, UsageRecord, UsageSummary, UsageTotals};
-pub use vins::VinDetail;
+pub use vins::{Vin, VinDetail};

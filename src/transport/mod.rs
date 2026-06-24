@@ -8,6 +8,19 @@ use std::time::Duration;
 
 use crate::error::{ApiErrorBody, VisorError};
 
+/// Percent-encode a single URL path segment (RFC 3986 unreserved chars pass through unchanged).
+pub(crate) fn encode_path_segment(s: &str) -> String {
+    s.bytes()
+        .fold(String::with_capacity(s.len()), |mut acc, b| {
+            if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'.' | b'_' | b'~') {
+                acc.push(b as char);
+            } else {
+                acc.push_str(&format!("%{b:02X}"));
+            }
+            acc
+        })
+}
+
 fn build_url_with_params(base_url: &str, path: &str, params: &[(String, String)]) -> reqwest::Url {
     let base = format!(
         "{}/{}",
